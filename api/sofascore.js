@@ -1,7 +1,6 @@
 /**
  * Vercel Serverless Function - Proxy para Sofascore API
- * Usa ScrapingBee para bypass de protecciones anti-bot
- * ScrapingBee FREE: 1,000 requests/mes permanente
+ * Usa ScraperAPI para bypass de protecciones anti-bot
  */
 
 export default async function handler(req, res) {
@@ -20,17 +19,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'URL parameter is required' });
   }
 
-  const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
+  const scraperApiKey = process.env.SCRAPER_API_KEY;
 
   try {
     let data;
 
-    if (scrapingBeeKey && scrapingBeeKey !== 'your_scrapingbee_api_key_here') {
-      // Usar ScrapingBee (1000 requests/mes GRATIS permanente)
-      console.log('Using ScrapingBee...');
-      const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${scrapingBeeKey}&url=${encodeURIComponent(url)}`;
+    if (scraperApiKey && scraperApiKey !== 'your_scraper_api_key_here') {
+      // Opción A: Usar ScraperAPI (recomendado)
+      console.log('Using ScraperAPI...');
+      const scraperUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(url)}`;
       
-      const response = await fetch(scrapingBeeUrl, {
+      const response = await fetch(scraperUrl, {
         headers: {
           'Accept': 'application/json',
         }
@@ -38,30 +37,33 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`ScrapingBee error ${response.status}:`, errorText);
-        throw new Error(`ScrapingBee responded with status ${response.status}`);
+        console.error(`ScraperAPI error ${response.status}:`, errorText);
+        throw new Error(`ScraperAPI responded with status ${response.status}`);
       }
 
-      // ScrapingBee devuelve el contenido directamente
       data = await response.json();
     } else {
-      // Fallback - intento directo (probablemente falle)
-      console.log('ScrapingBee not configured, trying direct access...');
+      // Opción B: Fallback - intento directo con headers mejorados
+      console.log('ScraperAPI not configured, trying direct access...');
       
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
           'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
           'Referer': 'https://www.sofascore.com/',
           'Origin': 'https://www.sofascore.com',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         },
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Direct access error ${response.status}:`, errorText);
-        throw new Error(`Sofascore blocked request (${response.status}). Register at https://www.scrapingbee.com for FREE 1000 requests/month`);
+        throw new Error(`Sofascore blocked request (${response.status}). Consider using ScraperAPI - register at https://www.scraperapi.com`);
       }
 
       data = await response.json();
@@ -73,7 +75,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       error: 'Failed to fetch from Sofascore', 
       message: error.message,
-      hint: 'Register FREE at https://www.scrapingbee.com (1000 requests/month forever)'
+      hint: 'Register at https://www.scraperapi.com for free API key (1000 requests/month)'
     });
   }
 }

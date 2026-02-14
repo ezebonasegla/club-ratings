@@ -72,13 +72,18 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     const incidentsData = incidentsResponse.data.incidents;
 
     // Procesar datos del partido
+    const homeScore = eventData.homeScore?.display || 0;
+    const awayScore = eventData.awayScore?.display || 0;
+    
     const matchInfo = {
       date: new Date(eventData.startTimestamp * 1000).toLocaleDateString('es-AR'),
       homeTeam: eventData.homeTeam.name,
       awayTeam: eventData.awayTeam.name,
       competition: eventData.tournament.name,
       round: eventData.roundInfo?.round || '',
-      score: `${eventData.homeScore?.display || 0} - ${eventData.awayScore?.display || 0}`
+      score: `${homeScore} - ${awayScore}`,
+      homeScore: homeScore,
+      awayScore: awayScore
     };
 
     // Si se proporcionó un club de usuario, verificar que el partido sea de ese club
@@ -104,6 +109,26 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     
     userTeam = isUserTeamHome ? 'home' : 'away';
     rival = isUserTeamHome ? eventData.awayTeam.name : eventData.homeTeam.name;
+
+    // Determinar resultado del partido para el equipo del usuario
+    const userScore = isUserTeamHome ? matchInfo.homeScore : matchInfo.awayScore;
+    const rivalScore = isUserTeamHome ? matchInfo.awayScore : matchInfo.homeScore;
+    
+    let result;
+    if (userScore > rivalScore) {
+      result = 'win';
+    } else if (userScore < rivalScore) {
+      result = 'loss';
+    } else {
+      result = 'draw';
+    }
+    
+    // Agregar información del resultado al matchInfo
+    matchInfo.userTeam = userTeam;
+    matchInfo.result = result;
+    matchInfo.userScore = userScore;
+    matchInfo.rivalScore = rivalScore;
+    matchInfo.rival = rival;
 
     // Procesar alineaciones del club del usuario
     const userLineup = lineupsData[userTeam];

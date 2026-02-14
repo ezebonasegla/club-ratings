@@ -13,6 +13,28 @@ const ManageRatings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Helper para determinar el resultado del partido
+  const getMatchResult = (matchInfo) => {
+    if (!matchInfo) return 'draw';
+    
+    // Si ya está guardado el resultado, usarlo
+    if (matchInfo.result) {
+      return matchInfo.result;
+    }
+    
+    // Fallback: calcular desde scores (para partidos antiguos)
+    const userScore = matchInfo.userScore;
+    const rivalScore = matchInfo.rivalScore;
+    
+    if (userScore !== undefined && rivalScore !== undefined) {
+      if (userScore > rivalScore) return 'win';
+      if (userScore < rivalScore) return 'loss';
+      return 'draw';
+    }
+    
+    return 'draw';
+  };
+
   useEffect(() => {
     if (user) {
       loadRatings();
@@ -138,7 +160,9 @@ const ManageRatings = () => {
                     <h3>{rating.matchInfo.rival}</h3>
                     <div className="match-details-mini">
                       <span className="date">{rating.matchInfo.date}</span>
-                      <span className="score">{rating.matchInfo.score}</span>
+                      <span className={`score score-${getMatchResult(rating.matchInfo)}`}>
+                        {rating.matchInfo.score}
+                      </span>
                       <span className="competition">{rating.matchInfo.competition}</span>
                     </div>
                   </div>
