@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function - Proxy para Sofascore API
- * Evita problemas de CORS y bloqueos 403
+ * Usa AllOrigins como proxy intermedio para evitar bloqueos
  */
 
 export default async function handler(req, res) {
@@ -20,31 +20,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Hacer la petición a Sofascore desde el servidor con headers completos
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
-        'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"',
-      },
-    });
+    // Usar AllOrigins como proxy CORS - más confiable que intentar burlar a Sofascore directamente
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    
+    const response = await fetch(proxyUrl);
 
     if (!response.ok) {
-      console.error(`Sofascore error ${response.status}:`, await response.text());
-      throw new Error(`Sofascore responded with status ${response.status}`);
+      console.error(`Proxy error ${response.status}`);
+      throw new Error(`Proxy responded with status ${response.status}`);
     }
 
-    const data = await response.json();
+    const proxyData = await response.json();
+    
+    if (!proxyData.contents) {
+      throw new Error('No data received from proxy');
+    }
+
+    // Parse el contenido JSON de Sofascore
+    const data = JSON.parse(proxyData.contents);
     return res.status(200).json(data);
   } catch (error) {
     console.error('Proxy error:', error);
