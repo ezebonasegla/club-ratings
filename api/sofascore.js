@@ -1,7 +1,40 @@
 /**
  * Vercel Serverless Function - Proxy para Sofascore API
- * Usa ScraperAPI para bypass de protecciones anti-bot
+ * Sistema de scraping propio con rotating headers y delays
  */
+
+// Pool de User Agents reales
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+];
+
+// Delay aleatorio para simular comportamiento humano
+const randomDelay = (min = 500, max = 1500) => {
+  return new Promise(resolve => setTimeout(resolve, Math.random() * (max - min) + min));
+};
+
+// Obtener headers aleatorios
+const getRandomHeaders = () => {
+  const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  return {
+    'User-Agent': userAgent,
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://www.sofascore.com/',
+    'Origin': 'https://www.sofascore.com',
+    'Connection': 'keep-alive',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-site',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+  };
+};
 
 export default async function handler(req, res) {
   // Habilitar CORS
@@ -19,64 +52,81 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'URL parameter is required' });
   }
 
+  const scraperApiKey = process.env.SCRAPER_API_KEY;
+
   try {
-    // Delay aleatorio para evitar detección de bot
-    const delay = Math.floor(Math.random() * 500) + 200;
-    await new Promise(resolve => setTimeout(resolve, delay));
+    let data;
 
-    // Array de User-Agents para rotar
-    const userAgents = [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
-    ];
-    
-    const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
-    
-    console.log('Fetching from Sofascore...', url);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': randomUA,
-        'Accept': '*/*',
-        'Accept-Language': 'es-ES,es;q=0.9',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
-      },
-      redirect: 'follow',
-    });
-
-    console.log('Response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'No response body');
-      console.error(`Sofascore blocked request (${response.status}):`, errorText.substring(0, 200));
+    if (scraperApiKey && scraperApiKey !== 'your_scraper_api_key_here') {
+      // Opción A: Usar ScraperAPI si está configurado
+      console.log('Using ScraperAPI...');
+      const scraperUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(url)}`;
       
-      // Si es 403, dar mensaje específico
-      if (response.status === 403) {
-        return res.status(403).json({
-          error: 'Sofascore blocked the request',
-          message: 'Sofascore API requires paid scraping service. The free 7-day trial of ScraperAPI has likely expired.',
-          hint: 'Options: 1) Use manual URL input only, 2) Subscribe to ScraperAPI ($49/mo), 3) Deploy your own Puppeteer scraper'
-        });
+      const response = await fetch(scraperUrl, {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`ScraperAPI error: ${response.status}`);
       }
+
+      data = await response.json();
+    } else {
+      // Opción B: Sistema propio con rotating headers + delays
+      console.log('Using custom scraper with rotating headers...');
       
-      throw new Error(`Status ${response.status}`);
+      // Delay aleatorio antes de hacer la petición (simula comportamiento humano)
+      await randomDelay(300, 800);
+      
+      // Intentar con headers aleatorios
+      let lastError = null;
+      const maxRetries = 3;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`Attempt ${attempt}/${maxRetries}...`);
+          
+          const headers = getRandomHeaders();
+          const response = await fetch(url, { headers });
+
+          if (response.ok) {
+            data = await response.json();
+            console.log('✓ Success!');
+            break;
+          }
+
+          if (response.status === 403 || response.status === 429) {
+            lastError = new Error(`Blocked by Sofascore (${response.status})`);
+            
+            if (attempt < maxRetries) {
+              // Esperar más tiempo antes de reintentar
+              const backoffDelay = attempt * 2000;
+              console.log(`Waiting ${backoffDelay}ms before retry...`);
+              await randomDelay(backoffDelay, backoffDelay + 1000);
+              continue;
+            }
+          } else {
+            throw new Error(`HTTP ${response.status}`);
+          }
+        } catch (err) {
+          lastError = err;
+          if (attempt === maxRetries) break;
+          await randomDelay(1000, 2000);
+        }
+      }
+
+      if (!data) {
+        throw lastError || new Error('Failed after all retries');
+      }
     }
 
-    const data = await response.json();
-    console.log('Success! Got data from Sofascore');
     return res.status(200).json(data);
-    
   } catch (error) {
-    console.error('Proxy error:', error.message);
+    console.error('Proxy error:', error);
     return res.status(500).json({ 
       error: 'Failed to fetch from Sofascore', 
       message: error.message,
-      details: 'Sofascore requires advanced scraping. Consider using paid services or manual input only.'
+      hint: scraperApiKey ? '' : 'Consider using ScraperAPI for more reliable access (https://www.scraperapi.com)'
     });
   }
 }
