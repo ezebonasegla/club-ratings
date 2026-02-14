@@ -20,6 +20,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Delay aleatorio para evitar detección de bot
+    const delay = Math.floor(Math.random() * 500) + 200;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
     // Array de User-Agents para rotar
     const userAgents = [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -29,42 +33,50 @@ export default async function handler(req, res) {
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
     ];
     
-    // Seleccionar User-Agent aleatorio
     const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
     
-    console.log('Attempting direct access with custom headers...');
+    console.log('Fetching from Sofascore...', url);
     
     const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'User-Agent': randomUA,
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept': '*/*',
+        'Accept-Language': 'es-ES,es;q=0.9',
         'Referer': 'https://www.sofascore.com/',
         'Origin': 'https://www.sofascore.com',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
       },
+      redirect: 'follow',
     });
 
+    console.log('Response status:', response.status);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Sofascore error ${response.status}:`, errorText);
-      throw new Error(`Sofascore responded with status ${response.status}`);
+      const errorText = await response.text().catch(() => 'No response body');
+      console.error(`Sofascore blocked request (${response.status}):`, errorText.substring(0, 200));
+      
+      // Si es 403, dar mensaje específico
+      if (response.status === 403) {
+        return res.status(403).json({
+          error: 'Sofascore blocked the request',
+          message: 'Sofascore API requires paid scraping service. The free 7-day trial of ScraperAPI has likely expired.',
+          hint: 'Options: 1) Use manual URL input only, 2) Subscribe to ScraperAPI ($49/mo), 3) Deploy your own Puppeteer scraper'
+        });
+      }
+      
+      throw new Error(`Status ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Success! Got data from Sofascore');
     return res.status(200).json(data);
+    
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('Proxy error:', error.message);
     return res.status(500).json({ 
       error: 'Failed to fetch from Sofascore', 
-      message: error.message
+      message: error.message,
+      details: 'Sofascore requires advanced scraping. Consider using paid services or manual input only.'
     });
   }
 }
