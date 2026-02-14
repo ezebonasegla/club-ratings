@@ -1,5 +1,6 @@
-// Vercel Serverless Function - Proxy para Sofascore API
+// Vercel Serverless Function - Proxy para BeSoccer
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
   // Permitir CORS
@@ -15,48 +16,36 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { endpoint } = req.query;
+  const { url } = req.query;
 
-  if (!endpoint) {
-    return res.status(400).json({ error: 'Missing endpoint parameter' });
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url parameter' });
   }
 
   try {
-    const sofascoreUrl = `https://api.sofascore.com/api/v1/${endpoint}`;
-    
-    // Simular navegador real con headers completos
-    const response = await axios.get(sofascoreUrl, {
+    const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'es-AR,es;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
         'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"'
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none'
       },
-      timeout: 20000,
-      maxRedirects: 5,
-      validateStatus: (status) => status < 500
+      timeout: 20000
     });
 
-    return res.status(200).json(response.data);
+    return res.status(200).send(response.data);
   } catch (error) {
-    console.error('Error proxying Sofascore request:', error.message);
+    console.error('Error fetching BeSoccer:', error.message);
     
     return res.status(error.response?.status || 500).json({
-      error: 'Error fetching from Sofascore',
+      error: 'Error fetching from BeSoccer',
       message: error.message,
-      statusCode: error.response?.status,
-      details: error.response?.data || null
+      statusCode: error.response?.status
     });
   }
 }

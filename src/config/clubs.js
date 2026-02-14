@@ -10,7 +10,8 @@ export const CLUBS = [
       text: '#FFFFFF',
       textSecondary: '#333333'
     },
-    sofascoreId: 3211
+    sofascoreId: 3211,
+    besoccerSlug: 'ca-river-plate'
   },
   {
     id: 'boca',

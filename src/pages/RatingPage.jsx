@@ -21,8 +21,8 @@ const RatingPage = () => {
   const [showOldMatchModal, setShowOldMatchModal] = useState(false);
 
   const handleLoadLastMatch = async () => {
-    if (!club || !club.sofascoreId) {
-      setError('No se pudo obtener el ID del club para cargar el último partido');
+    if (!club || !club.besoccerSlug) {
+      setError('No se pudo obtener el slug de BeSoccer para este club');
       return;
     }
 
@@ -31,7 +31,7 @@ const RatingPage = () => {
     setSaved(false);
 
     try {
-      const lastMatchUrl = await getLastMatchUrl(club.sofascoreId);
+      const lastMatchUrl = await getLastMatchUrl(club.besoccerSlug);
       
       if (!lastMatchUrl) {
         setError('No se encontró un partido finalizado reciente para este club');
@@ -74,7 +74,7 @@ const RatingPage = () => {
 
   const handleLoadMatch = async () => {
     if (!matchUrl.trim()) {
-      setError('Por favor ingresa una URL de Sofascore');
+      setError('Por favor ingresa una URL de BeSoccer');
       return;
     }
 
@@ -214,9 +214,9 @@ const RatingPage = () => {
         <div className="main-action">
           <button
             onClick={handleLoadLastMatch}
-            disabled={loading || loadingLastMatch || !club?.sofascoreId}
+            disabled={loading || loadingLastMatch || !club?.besoccerSlug}
             className="primary-action-button"
-            title={!club?.sofascoreId ? 'ID de Sofascore no disponible para este club' : 'Cargar último partido del club'}
+            title={!club?.besoccerSlug ? 'Slug de BeSoccer no disponible para este club' : 'Cargar último partido del club'}
           >
             {loadingLastMatch ? (
               <>
@@ -281,15 +281,16 @@ const RatingPage = () => {
                 <div className="instructions">
                   <h3>¿Cómo obtener la URL del partido?</h3>
                   <ol>
-                    <li>Ve a <a href={`https://www.sofascore.com/football/team/${club?.name?.toLowerCase().replace(/\s+/g, '-')}/${club?.sofascoreId}`} target="_blank" rel="noopener noreferrer">Sofascore</a></li>
+                    <li>Ve a <a href={`https://es.besoccer.com/equipo/partidos/${club?.besoccerSlug || 'ca-river-plate'}`} target="_blank" rel="noopener noreferrer">BeSoccer</a></li>
                     <li>Busca el partido de <strong>{club?.shortName}</strong> que quieres valorar</li>
                     <li>Haz clic en el partido para abrir sus detalles</li>
+                    <li>Ve a la pestaña "Alineaciones"</li>
                     <li>Copia la URL completa del navegador</li>
                   </ol>
                   
                   <div className="url-example">
                     <strong>Ejemplo de URL válida:</strong>
-                    <code>https://www.sofascore.com/football/match/ca-lanus-ca-independiente#id:15270107</code>
+                    <code>https://es.besoccer.com/partido/argentinos-juniors/ca-river-plate/2026238340/alineaciones</code>
                   </div>
                 </div>
 
@@ -300,7 +301,7 @@ const RatingPage = () => {
                     type="text"
                     value={matchUrl}
                     onChange={(e) => setMatchUrl(e.target.value)}
-                    placeholder="Pega aquí la URL de Sofascore"
+                    placeholder="Pega aquí la URL de BeSoccer"
                     className="url-input"
                   />
                   
