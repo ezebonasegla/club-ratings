@@ -17,18 +17,19 @@ const apiPlugin = () => ({
         }
 
         try {
-          // Usar corsproxy.io en desarrollo
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-          const response = await fetch(proxyUrl, {
+          // En desarrollo, intentar acceso directo (funciona desde localhost)
+          const response = await fetch(targetUrl, {
             headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               'Accept': 'application/json',
+              'Referer': 'https://www.sofascore.com/',
             }
           });
           
           if (!response.ok) {
             const errorText = await response.text();
             console.error('Dev proxy error:', errorText);
-            throw new Error(`Proxy responded with status ${response.status}`);
+            throw new Error(`Sofascore responded with status ${response.status}`);
           }
 
           const data = await response.json();
