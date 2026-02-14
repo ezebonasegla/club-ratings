@@ -521,8 +521,6 @@ const ManageRatings = () => {
                     </div>
                   </div>
                 </div>
-                  </div>
-                </div>
               </div>
 
               <div className="share-actions">
