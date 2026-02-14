@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { fetchMatchData, getLastMatchUrl, extractMatchId } from '../services/sofascoreService';
+import { fetchMatchData, getLastMatchUrl, extractMatchId } from '../services/besoccerService';
 import { saveRatingToCloud, checkMatchAlreadyRated } from '../services/cloudStorageService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
