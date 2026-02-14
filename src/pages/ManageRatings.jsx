@@ -1,17 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getAllRatingsFromCloud, deleteRatingFromCloud, getRatingByIdFromCloud, updateRatingInCloud } from '../services/cloudStorageService';
 import { useAuth } from '../context/AuthContext';
-import { Trash2, Edit2, X, Save, Calendar, Trophy, Loader } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { Trash2, Edit2, X, Save, Calendar, Trophy, Loader, Share2, Download, Copy, Check } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import './ManageRatings.css';
 
 const ManageRatings = () => {
   const { user } = useAuth();
+  const { club } = useTheme();
   const [ratings, setRatings] = useState([]);
   const [editingRating, setEditingRating] = useState(null);
   const [playerRatings, setPlayerRatings] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharingRating, setSharingRating] = useState(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareCardRef = useRef(null);
 
   // Helper para determinar el resultado del partido
   const getMatchResult = (matchInfo) => {
@@ -127,6 +134,71 @@ const ManageRatings = () => {
     setPlayerRatings({});
   };
 
+  const handleShare = (rating) => {
+    setSharingRating(rating);
+    setCopied(false);
+  };
+
+  const handleShareAsText = () => {
+    if (!sharingRating) return;
+
+    const ratedPlayers = sharingRating.players.filter(p => p.rating !== null && p.rating !== undefined);
+    const avgRating = ratedPlayers.length > 0
+      ? (ratedPlayers.reduce((sum, p) => sum + p.rating, 0) / ratedPlayers.length).toFixed(1)
+      : 'N/A';
+
+    let text = `⚽ ${club?.name || 'Mi Equipo'} - Valoraciones\n`;
+    text += `🆚 ${sharingRating.matchInfo.rival}\n`;
+    text += `📊 ${sharingRating.matchInfo.score} | ${sharingRating.matchInfo.competition}\n`;
+    text += `📅 ${sharingRating.matchInfo.date}\n\n`;
+    text += `📈 Promedio del equipo: ${avgRating}\n\n`;
+    text += `👥 Valoraciones:\n`;
+    
+    ratedPlayers
+      .sort((a, b) => b.rating - a.rating)
+      .forEach((player, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐';
+        text += `${medal} ${player.name}: ${player.rating}/10`;
+        if (player.goals > 0) text += ` ⚽${player.goals}`;
+        if (player.assists > 0) text += ` 🅰️${player.assists}`;
+        text += `\n`;
+      });
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleShareAsImage = async () => {
+    if (!shareCardRef.current) return;
+
+    setGeneratingImage(true);
+
+    try {
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: '#1a1a2e',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `valoracion-${sharingRating.matchInfo.rival.replace(/\s+/g, '-')}-${sharingRating.matchInfo.date}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        setGeneratingImage(false);
+      });
+    } catch (error) {
+      console.error('Error generating image:', error);
+      alert('Error al generar la imagen');
+      setGeneratingImage(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="manage-ratings-page">
@@ -167,6 +239,14 @@ const ManageRatings = () => {
                     </div>
                   </div>
                   <div className="rating-actions">
+                    <button
+                      className="btn-share"
+                      onClick={() => handleShare(rating)}
+                      title="Compartir valoración"
+                    >
+                      <Share2 size={18} />
+                      Compartir
+                    </button>
                     <button
                       className="btn-edit"
                       onClick={() => handleEdit(rating.id)}
@@ -340,6 +420,121 @@ const ManageRatings = () => {
                     <>
                       <Save size={18} />
                       Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Share Modal */}
+        {sharingRating && (
+          <div className="share-modal-overlay" onClick={() => setSharingRating(null)}>
+            <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Compartir Valoración</h2>
+                <button className="btn-close" onClick={() => setSharingRating(null)}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Preview Card */}
+              <div className="share-preview" ref={shareCardRef}>
+                <div className="share-card"
+                  style={{
+                    background: `linear-gradient(135deg, ${club?.colors.primary} 0%, ${club?.colors.secondary} 100%)`,
+                    color: club?.colors.text
+                  }}
+                >
+                  <div className="share-card-header">
+                    <h3>{club?.name || 'Mi Equipo'}</h3>
+                    <p className="share-subtitle">Valoraciones</p>
+                  </div>
+                  
+                  <div className="share-match-info">
+                    <div className="share-rival">{sharingRating.matchInfo.rival}</div>
+                    <div className="share-score">{sharingRating.matchInfo.score}</div>
+                    <div className="share-details">
+                      <span>{sharingRating.matchInfo.date}</span>
+                      <span>{sharingRating.matchInfo.competition}</span>
+                    </div>
+                  </div>
+
+                  <div className="share-stats">
+                    <div className="share-stat">
+                      <span className="stat-label">Promedio</span>
+                      <span className="stat-value">
+                        {sharingRating.players.filter(p => p.rating !== null).length > 0
+                          ? (sharingRating.players
+                              .filter(p => p.rating !== null)
+                              .reduce((sum, p) => sum + p.rating, 0) / 
+                              sharingRating.players.filter(p => p.rating !== null).length
+                            ).toFixed(1)
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="share-stat">
+                      <span className="stat-label">Jugadores</span>
+                      <span className="stat-value">
+                        {sharingRating.players.filter(p => p.rating !== null).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="share-top-players">
+                    <h4>Mejores Valorados</h4>
+                    {sharingRating.players
+                      .filter(p => p.rating !== null)
+                      .sort((a, b) => b.rating - a.rating)
+                      .slice(0, 5)
+                      .map((player, index) => (
+                        <div key={player.id} className="share-player-row">
+                          <span className="player-rank">{index + 1}</span>
+                          <span className="player-name-share">{player.name}</span>
+                          <span className="player-rating-share">{player.rating}</span>
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="share-footer">
+                    <span>Club Ratings App</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="share-actions">
+                <button 
+                  className="btn-share-option"
+                  onClick={handleShareAsText}
+                  disabled={generatingImage}
+                >
+                  {copied ? (
+                    <>
+                      <Check size={20} />
+                      Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={20} />
+                      Copiar como Texto
+                    </>
+                  )}
+                </button>
+                <button 
+                  className="btn-share-option"
+                  onClick={handleShareAsImage}
+                  disabled={generatingImage}
+                >
+                  {generatingImage ? (
+                    <>
+                      <Loader size={20} className="spinner" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={20} />
+                      Descargar Imagen
                     </>
                   )}
                 </button>

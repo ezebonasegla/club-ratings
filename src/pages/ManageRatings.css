@@ -116,8 +116,10 @@ h1 {
 .rating-actions {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
+.btn-share,
 .btn-edit,
 .btn-delete {
   display: flex;
@@ -130,6 +132,16 @@ h1 {
   cursor: pointer;
   transition: all 0.3s;
   font-size: 0.9rem;
+}
+
+.btn-share {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-share:hover {
+  background: #45a049;
+  transform: translateY(-2px);
 }
 
 .btn-edit {
@@ -466,5 +478,258 @@ h1 {
   .modal-body,
   .modal-footer {
     padding: 1rem;
+  }
+}
+
+/* Share Modal */
+.share-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.share-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.share-preview {
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.share-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.share-card-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 1rem;
+}
+
+.share-card-header h3 {
+  font-size: 1.8rem;
+  margin: 0 0 0.25rem 0;
+  font-weight: bold;
+}
+
+.share-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.share-match-info {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.share-rival {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.share-score {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.share-details {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  flex-wrap: wrap;
+}
+
+.share-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.share-stat {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1rem;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.share-top-players {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.share-top-players h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  text-align: center;
+  opacity: 0.95;
+}
+
+.share-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.share-player-row:last-child {
+  margin-bottom: 0;
+}
+
+.player-rank {
+  font-weight: bold;
+  font-size: 1.1rem;
+  width: 24px;
+  text-align: center;
+}
+
+.player-name-share {
+  flex: 1;
+  font-weight: 600;
+}
+
+.player-rating-share {
+  font-weight: bold;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+}
+
+.share-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.share-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-share-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.btn-share-option:first-child {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-share-option:first-child:hover:not(:disabled) {
+  background: #1976d2;
+  transform: translateY(-2px);
+}
+
+.btn-share-option:last-child {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-share-option:last-child:hover:not(:disabled) {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+.btn-share-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .share-modal {
+    padding: 1.5rem;
+  }
+
+  .share-card {
+    padding: 1.5rem;
+  }
+
+  .share-actions {
+    flex-direction: column;
+  }
+
+  .btn-share-option {
+    width: 100%;
+  }
+
+  .btn-share,
+  .btn-edit,
+  .btn-delete {
+    flex: 1;
+    justify-content: center;
   }
 }
