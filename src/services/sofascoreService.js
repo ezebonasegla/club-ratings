@@ -2,12 +2,15 @@ import axios from 'axios';
 
 /**
  * Servicio para extraer información de partidos desde Sofascore
- * Nota: Sofascore carga datos dinámicamente con JavaScript, por lo que necesitarás
- * un proxy o backend que haga web scraping. Esta es una versión simplificada.
+ * En producción usa Vercel Serverless Functions como proxy
+ * En desarrollo accede directamente a la API de Sofascore
  */
 
-// Para desarrollo, usa un proxy CORS o implementa un backend
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// Detectar entorno
+const isDevelopment = import.meta.env.MODE === 'development';
+const BASE_URL = isDevelopment 
+  ? 'https://api.sofascore.com/api/v1' 
+  : '/api/sofascore';
 
 /**
  * Extrae el ID del partido de la URL de Sofascore
@@ -45,10 +48,16 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw new Error('URL inválida de Sofascore');
     }
 
-    // Endpoints de la API de Sofascore
-    const eventUrl = `https://api.sofascore.com/api/v1/event/${matchId}`;
-    const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
-    const incidentsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
+    // Endpoints - usar proxy en producción
+    const eventUrl = isDevelopment 
+      ? `${BASE_URL}/event/${matchId}`
+      : `${BASE_URL}?endpoint=event/${matchId}`;
+    const lineupsUrl = isDevelopment 
+      ? `${BASE_URL}/event/${matchId}/lineups`
+      : `${BASE_URL}?endpoint=event/${matchId}/lineups`;
+    const incidentsUrl = isDevelopment 
+      ? `${BASE_URL}/event/${matchId}/incidents`
+      : `${BASE_URL}?endpoint=event/${matchId}/incidents`;
 
     // Hacer peticiones en paralelo
     const [eventResponse, lineupsResponse, incidentsResponse] = await Promise.all([
@@ -204,8 +213,10 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
  */
 export const getLastMatchUrl = async (teamId) => {
   try {
-    // Obtener los últimos eventos del equipo
-    const eventsUrl = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
+    // Obtener los últimos eventos del equipo - usar proxy en producción
+    const eventsUrl = isDevelopment 
+      ? `${BASE_URL}/team/${teamId}/events/last/0`
+      : `${BASE_URL}?endpoint=team/${teamId}/events/last/0`;
     const response = await axios.get(eventsUrl);
     
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
