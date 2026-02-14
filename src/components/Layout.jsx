@@ -94,7 +94,7 @@ const Layout = () => {
         <Outlet />
       </main>
       <footer className="app-footer">
-        <p>{club?.name || 'Valoraciones'} © 2026 | Desarrollado con ❤️ por un hincha</p>
+        <p>© 2026 Club Ratings | Valoraciones de Fútbol Argentino ⚽</p>
       </footer>
     </div>
   );
