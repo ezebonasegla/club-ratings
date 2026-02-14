@@ -65,7 +65,12 @@ const RatingPage = () => {
       setPlayerRatings(initialRatings);
       setSkipPlayers(initialSkip);
     } catch (err) {
-      setError(err.message || 'Error al cargar el último partido');
+      const errorMsg = err.message || 'Error al cargar el último partido';
+      if (errorMsg.includes('No se encontró ningún partido finalizado')) {
+        setError('No se pudo obtener automáticamente el último partido. Por favor, ingresa manualmente la URL de BeSoccer haciendo clic en "Valorar Partido Anterior".');
+      } else {
+        setError(errorMsg);
+      }
       setMatchData(null);
     } finally {
       setLoadingLastMatch(false);
