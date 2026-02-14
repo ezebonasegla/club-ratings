@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ClipboardList, BarChart3, Settings, LogOut, Shield } from 'lucide-react';
+import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import './Layout.css';
@@ -9,10 +9,16 @@ const Layout = () => {
   const { club } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
+    setMobileMenuOpen(false);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -28,10 +34,20 @@ const Layout = () => {
               <span className="logo-subtitle">Sistema de Valoraciones</span>
             </div>
           </div>
-          <nav className="main-nav">
+          
+          <button 
+            className="mobile-menu-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          <nav className={`main-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
             <NavLink 
               to="/" 
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={closeMobileMenu}
             >
               <ClipboardList size={20} />
               <span>Valorar Partido</span>
@@ -39,6 +55,7 @@ const Layout = () => {
             <NavLink 
               to="/dashboard" 
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={closeMobileMenu}
             >
               <BarChart3 size={20} />
               <span>Dashboard</span>
@@ -46,6 +63,7 @@ const Layout = () => {
             <NavLink 
               to="/manage" 
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={closeMobileMenu}
             >
               <Settings size={20} />
               <span>Gestionar</span>
@@ -58,6 +76,7 @@ const Layout = () => {
                   to="/profile" 
                   className="user-info"
                   title="Ver perfil"
+                  onClick={closeMobileMenu}
                 >
                   {user.photoURL ? (
                     <img 
