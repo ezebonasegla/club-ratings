@@ -446,78 +446,81 @@ const ManageRatings = () => {
 
               {/* Preview Card */}
               <div className="share-preview" ref={shareCardRef}>
-                <div className="share-card"
-                  style={{
-                    background: `linear-gradient(135deg, ${club?.colors.primary} 0%, ${club?.colors.secondary} 100%)`,
-                    color: club?.colors.text
-                  }}
-                >
-                  <div className="share-card-header">
+                <div className="share-card">
+                  <div className="share-card-header"
+                    style={{
+                      background: `linear-gradient(135deg, ${club?.colors.primary} 0%, ${club?.colors.secondary} 100%)`,
+                      color: club?.colors.text
+                    }}
+                  >
                     <h3>{club?.name || 'Mi Equipo'}</h3>
                     <p className="share-subtitle">Valoraciones</p>
                   </div>
                   
-                  <div className="share-match-info">
-                    <div className="share-rival">{sharingRating.matchInfo.rival}</div>
-                    <div className="share-score">{sharingRating.matchInfo.score}</div>
-                    <div className="share-details">
-                      <span>{sharingRating.matchInfo.date}</span>
-                      <span>{sharingRating.matchInfo.competition}</span>
+                  <div className="share-card-body">
+                    <div className="share-match-info">
+                      <div className="share-rival">{sharingRating.matchInfo.rival}</div>
+                      <div className="share-score">{sharingRating.matchInfo.score}</div>
+                      <div className="share-details">
+                        <span>{sharingRating.matchInfo.date}</span>
+                        <span>{sharingRating.matchInfo.competition}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="share-stats">
-                    <div className="share-stat">
-                      <span className="stat-label">Promedio</span>
-                      <span className="stat-value">
-                        {(() => {
-                          const validPlayers = sharingRating.players.filter(p => 
+                    <div className="share-stats">
+                      <div className="share-stat">
+                        <span className="stat-label">Promedio</span>
+                        <span className="stat-value">
+                          {(() => {
+                            const validPlayers = sharingRating.players.filter(p => 
+                              p.rating !== null && 
+                              p.rating !== undefined && 
+                              !isNaN(p.rating) && 
+                              p.rating !== 'N/A'
+                            );
+                            return validPlayers.length > 0
+                              ? (validPlayers.reduce((sum, p) => sum + p.rating, 0) / validPlayers.length).toFixed(1)
+                              : 'N/A';
+                          })()}
+                        </span>
+                      </div>
+                      <div className="share-stat">
+                        <span className="stat-label">Jugadores</span>
+                        <span className="stat-value">
+                          {sharingRating.players.filter(p => 
                             p.rating !== null && 
                             p.rating !== undefined && 
                             !isNaN(p.rating) && 
                             p.rating !== 'N/A'
-                          );
-                          return validPlayers.length > 0
-                            ? (validPlayers.reduce((sum, p) => sum + p.rating, 0) / validPlayers.length).toFixed(1)
-                            : 'N/A';
-                        })()}
-                      </span>
+                          ).length}
+                        </span>
+                      </div>
                     </div>
-                    <div className="share-stat">
-                      <span className="stat-label">Jugadores</span>
-                      <span className="stat-value">
-                        {sharingRating.players.filter(p => 
+
+                    <div className="share-top-players">
+                      <h4>Valoraciones</h4>
+                      {sharingRating.players
+                        .filter(p => 
                           p.rating !== null && 
                           p.rating !== undefined && 
                           !isNaN(p.rating) && 
                           p.rating !== 'N/A'
-                        ).length}
-                      </span>
+                        )
+                        .sort((a, b) => b.rating - a.rating)
+                        .map((player, index) => (
+                          <div key={player.id} className="share-player-row">
+                            <span className="player-rank">{index + 1}</span>
+                            <span className="player-name-share">{player.name}</span>
+                            <span className="player-rating-share">{player.rating}</span>
+                          </div>
+                        ))}
+                    </div>
+
+                    <div className="share-footer">
+                      <span>Club Ratings App</span>
                     </div>
                   </div>
-
-                  <div className="share-top-players">
-                    <h4>Mejores Valorados</h4>
-                    {sharingRating.players
-                      .filter(p => 
-                        p.rating !== null && 
-                        p.rating !== undefined && 
-                        !isNaN(p.rating) && 
-                        p.rating !== 'N/A'
-                      )
-                      .sort((a, b) => b.rating - a.rating)
-                      .slice(0, 5)
-                      .map((player, index) => (
-                        <div key={player.id} className="share-player-row">
-                          <span className="player-rank">{index + 1}</span>
-                          <span className="player-name-share">{player.name}</span>
-                          <span className="player-rating-share">{player.rating}</span>
-                        </div>
-                      ))}
-                  </div>
-
-                  <div className="share-footer">
-                    <span>Club Ratings App</span>
+                </div>
                   </div>
                 </div>
               </div>
