@@ -1,9 +1,9 @@
 {
-  "name": "river-ratings",
+  "name": "club-ratings",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Sistema de valoraciones para jugadores de River Plate - Registra y analiza actuaciones partido a partido",
+  "description": "Sistema de valoraciones para jugadores del fútbol argentino - Registra y analiza actuaciones partido a partido de tu club favorito",
   "author": "Ezequiel Bonasegla",
   "scripts": {
     "dev": "vite",
