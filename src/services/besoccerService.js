@@ -9,16 +9,11 @@ const isDevelopment = import.meta.env.MODE === 'development';
 const PROXY_URL = '/api/sofascore'; // Reutilizamos el mismo endpoint serverless
 
 /**
- * Hacer petición con proxy en producción o directa en desarrollo
+ * Hacer petición con proxy (siempre, ya que BeSoccer tiene CORS)
  */
 const fetchHTML = async (url) => {
-  if (isDevelopment) {
-    const response = await axios.get(url);
-    return response.data;
-  } else {
-    const response = await axios.get(`${PROXY_URL}?url=${encodeURIComponent(url)}`);
-    return response.data;
-  }
+  const response = await axios.get(`${PROXY_URL}?url=${encodeURIComponent(url)}`);
+  return response.data;
 };
 
 /**
@@ -36,25 +31,12 @@ const parseHTML = (html) => {
 export const getLastMatchUrl = async (teamSlug) => {
   try {
     const url = `https://es.besoccer.com/equipo/partidos/${teamSlug}`;
-    const html = await fetchHTML(url);
-    const doc = parseHTML(html);
+    const response = await axios.get(`${PROXY_URL}?url=${encodeURIComponent(url)}&action=findLastMatch`);
     
-    // Buscar el primer partido que diga "Fin"
-    const matches = doc.querySelectorAll('.match-container, .panel-body');
-    
-    for (const match of matches) {
-      const statusElement = match.querySelector('.status, .minute, .result-status');
-      const statusText = statusElement?.textContent?.trim();
-      
-      if (statusText && statusText.toLowerCase().includes('fin')) {
-        // Encontrar el link del partido
-        const linkElement = match.querySelector('a[href*="/partido/"]');
-        if (linkElement) {
-          const href = linkElement.getAttribute('href');
-          const fullUrl = href.startsWith('http') ? href : `https://es.besoccer.com${href}`;
-          return fullUrl;
-        }
-      }
+    if (response.data.matches && response.data.matches.length > 0) {
+      const lastMatch = response.data.matches[0];
+      console.log('Partido finalizado encontrado:', lastMatch);
+      return lastMatch.url;
     }
     
     throw new Error('No se encontró ningún partido finalizado');
