@@ -24,7 +24,6 @@ export default async function handler(req, res) {
   try {
     const sofascoreUrl = `https://api.sofascore.com/api/v1/${endpoint}`;
     
-    // Estrategia 1: Intentar directamente con headers mejorados
     // Estrategia 1: Usar corsproxy.io (más confiable)
     try {
       const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(sofascoreUrl)}`;
