@@ -142,7 +142,12 @@ const ManageRatings = () => {
   const handleShareAsText = () => {
     if (!sharingRating) return;
 
-    const ratedPlayers = sharingRating.players.filter(p => p.rating !== null && p.rating !== undefined);
+    const ratedPlayers = sharingRating.players.filter(p => 
+      p.rating !== null && 
+      p.rating !== undefined && 
+      !isNaN(p.rating) && 
+      p.rating !== 'N/A'
+    );
     const avgRating = ratedPlayers.length > 0
       ? (ratedPlayers.reduce((sum, p) => sum + p.rating, 0) / ratedPlayers.length).toFixed(1)
       : 'N/A';
@@ -465,19 +470,28 @@ const ManageRatings = () => {
                     <div className="share-stat">
                       <span className="stat-label">Promedio</span>
                       <span className="stat-value">
-                        {sharingRating.players.filter(p => p.rating !== null).length > 0
-                          ? (sharingRating.players
-                              .filter(p => p.rating !== null)
-                              .reduce((sum, p) => sum + p.rating, 0) / 
-                              sharingRating.players.filter(p => p.rating !== null).length
-                            ).toFixed(1)
-                          : 'N/A'}
+                        {(() => {
+                          const validPlayers = sharingRating.players.filter(p => 
+                            p.rating !== null && 
+                            p.rating !== undefined && 
+                            !isNaN(p.rating) && 
+                            p.rating !== 'N/A'
+                          );
+                          return validPlayers.length > 0
+                            ? (validPlayers.reduce((sum, p) => sum + p.rating, 0) / validPlayers.length).toFixed(1)
+                            : 'N/A';
+                        })()}
                       </span>
                     </div>
                     <div className="share-stat">
                       <span className="stat-label">Jugadores</span>
                       <span className="stat-value">
-                        {sharingRating.players.filter(p => p.rating !== null).length}
+                        {sharingRating.players.filter(p => 
+                          p.rating !== null && 
+                          p.rating !== undefined && 
+                          !isNaN(p.rating) && 
+                          p.rating !== 'N/A'
+                        ).length}
                       </span>
                     </div>
                   </div>
@@ -485,7 +499,12 @@ const ManageRatings = () => {
                   <div className="share-top-players">
                     <h4>Mejores Valorados</h4>
                     {sharingRating.players
-                      .filter(p => p.rating !== null)
+                      .filter(p => 
+                        p.rating !== null && 
+                        p.rating !== undefined && 
+                        !isNaN(p.rating) && 
+                        p.rating !== 'N/A'
+                      )
                       .sort((a, b) => b.rating - a.rating)
                       .slice(0, 5)
                       .map((player, index) => (
