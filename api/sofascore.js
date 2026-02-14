@@ -20,24 +20,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Usar AllOrigins como proxy CORS - más confiable que intentar burlar a Sofascore directamente
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    // Usar corsproxy.io - más confiable para APIs protegidas
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
     
-    const response = await fetch(proxyUrl);
+    const response = await fetch(proxyUrl, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
 
     if (!response.ok) {
-      console.error(`Proxy error ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Proxy error ${response.status}:`, errorText);
       throw new Error(`Proxy responded with status ${response.status}`);
     }
 
-    const proxyData = await response.json();
-    
-    if (!proxyData.contents) {
-      throw new Error('No data received from proxy');
-    }
-
-    // Parse el contenido JSON de Sofascore
-    const data = JSON.parse(proxyData.contents);
+    const data = await response.json();
     return res.status(200).json(data);
   } catch (error) {
     console.error('Proxy error:', error);

@@ -17,16 +17,21 @@ const apiPlugin = () => ({
         }
 
         try {
-          // Usar AllOrigins como proxy CORS en desarrollo también
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-          const response = await fetch(proxyUrl);
+          // Usar corsproxy.io en desarrollo
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+          const response = await fetch(proxyUrl, {
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
           
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Dev proxy error:', errorText);
             throw new Error(`Proxy responded with status ${response.status}`);
           }
 
-          const proxyData = await response.json();
-          const data = JSON.parse(proxyData.contents);
+          const data = await response.json();
           
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Access-Control-Allow-Origin', '*');
