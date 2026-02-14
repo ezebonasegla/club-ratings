@@ -10,8 +10,7 @@ export const CLUBS = [
       text: '#FFFFFF',
       textSecondary: '#333333'
     },
-    sofascoreId: 3211,
-    besoccerSlug: 'ca-river-plate'
+    sofascoreId: 3211
   },
   {
     id: 'boca',
@@ -23,8 +22,7 @@ export const CLUBS = [
       text: '#FFFFFF',
       textSecondary: '#333333'
     },
-    sofascoreId: 3202,
-    besoccerSlug: 'ca-boca-juniors'
+    sofascoreId: 3202
   },
   {
     id: 'racing',
@@ -36,8 +34,7 @@ export const CLUBS = [
       text: '#FFFFFF',
       textSecondary: '#333333'
     },
-    sofascoreId: 3215,
-    besoccerSlug: 'racing-club'
+    sofascoreId: 3215
   },
   {
     id: 'independiente',
@@ -49,8 +46,7 @@ export const CLUBS = [
       text: '#FFFFFF',
       textSecondary: '#333333'
     },
-    sofascoreId: 3209,
-    besoccerSlug: 'ca-independiente'
+    sofascoreId: 3209
   },
   {
     id: 'san-lorenzo',

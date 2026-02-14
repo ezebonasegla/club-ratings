@@ -2,15 +2,22 @@ import axios from 'axios';
 
 /**
  * Servicio para extraer información de partidos desde Sofascore
- * En producción usa Vercel Serverless Functions como proxy
- * En desarrollo accede directamente a la API de Sofascore
+ * Usa Vercel Serverless Function como proxy para evitar CORS y 403
  */
 
-// Detectar entorno
-const isDevelopment = import.meta.env.MODE === 'development';
-const BASE_URL = isDevelopment 
-  ? 'https://api.sofascore.com/api/v1' 
+// Proxy URL - En producción usa /api/sofascore, en desarrollo localhost
+const PROXY_URL = import.meta.env.DEV 
+  ? 'http://localhost:5173/api/sofascore'
   : '/api/sofascore';
+
+/**
+ * Función helper para hacer peticiones a través del proxy
+ */
+const fetchThroughProxy = async (url) => {
+  const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+  const response = await axios.get(proxyUrl);
+  return response;
+};
 
 /**
  * Extrae el ID del partido de la URL de Sofascore
@@ -48,22 +55,16 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw new Error('URL inválida de Sofascore');
     }
 
-    // Endpoints - usar proxy en producción
-    const eventUrl = isDevelopment 
-      ? `${BASE_URL}/event/${matchId}`
-      : `${BASE_URL}?endpoint=event/${matchId}`;
-    const lineupsUrl = isDevelopment 
-      ? `${BASE_URL}/event/${matchId}/lineups`
-      : `${BASE_URL}?endpoint=event/${matchId}/lineups`;
-    const incidentsUrl = isDevelopment 
-      ? `${BASE_URL}/event/${matchId}/incidents`
-      : `${BASE_URL}?endpoint=event/${matchId}/incidents`;
+    // Endpoints de la API de Sofascore
+    const eventUrl = `https://api.sofascore.com/api/v1/event/${matchId}`;
+    const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
+    const incidentsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
 
-    // Hacer peticiones en paralelo
+    // Hacer peticiones en paralelo a través del proxy
     const [eventResponse, lineupsResponse, incidentsResponse] = await Promise.all([
-      axios.get(eventUrl),
-      axios.get(lineupsUrl),
-      axios.get(incidentsUrl)
+      fetchThroughProxy(eventUrl),
+      fetchThroughProxy(lineupsUrl),
+      fetchThroughProxy(incidentsUrl)
     ]);
 
     const eventData = eventResponse.data.event;
@@ -213,11 +214,9 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
  */
 export const getLastMatchUrl = async (teamId) => {
   try {
-    // Obtener los últimos eventos del equipo - usar proxy en producción
-    const eventsUrl = isDevelopment 
-      ? `${BASE_URL}/team/${teamId}/events/last/0`
-      : `${BASE_URL}?endpoint=team/${teamId}/events/last/0`;
-    const response = await axios.get(eventsUrl);
+    // Obtener los últimos eventos del equipo
+    const eventsUrl = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
+    const response = await fetchThroughProxy(eventsUrl);
     
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
     
