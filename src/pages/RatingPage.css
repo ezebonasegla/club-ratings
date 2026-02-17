@@ -650,6 +650,21 @@ h2 {
   min-width: 50px;
 }
 
+.sofascore-rating-badge {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.3);
+  cursor: help;
+  white-space: nowrap;
+}
+
 .player-rating-input input[type="number"] {
   width: 100px;
   padding: 0.75rem;
@@ -659,6 +674,12 @@ h2 {
   font-weight: 600;
   text-align: center;
   transition: all 0.3s;
+}
+
+.player-rating-input input[type="number"]::placeholder {
+  color: #999;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .player-rating-input input[type="number"]:disabled {

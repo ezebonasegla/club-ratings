@@ -376,6 +376,11 @@ const RatingPage = () => {
                     </div>
                     <div className="player-rating-input">
                       <label htmlFor={`rating-${player.id}`}>Nota:</label>
+                      {player.sofascoreRating && (
+                        <span className="sofascore-rating-badge" title="Valoración de Sofascore">
+                          ⭐ {player.sofascoreRating}
+                        </span>
+                      )}
                       <input
                         id={`rating-${player.id}`}
                         type="number"
@@ -384,7 +389,7 @@ const RatingPage = () => {
                         step="0.5"
                         value={playerRatings[player.id] || ''}
                         onChange={(e) => handleRatingChange(player.id, e.target.value)}
-                        placeholder="0-10"
+                        placeholder={player.sofascoreRating ? `Sugerida: ${player.sofascoreRating}` : "0-10"}
                         disabled={skipPlayers[player.id]}
                       />
                       <label className="skip-player-label">
@@ -432,6 +437,11 @@ const RatingPage = () => {
                           </div>
                           <div className="player-rating-input">
                             <label htmlFor={`rating-${player.id}`}>Nota:</label>
+                            {player.sofascoreRating && (
+                              <span className="sofascore-rating-badge" title="Valoración de Sofascore">
+                                ⭐ {player.sofascoreRating}
+                              </span>
+                            )}
                             <input
                               id={`rating-${player.id}`}
                               type="number"
@@ -440,7 +450,7 @@ const RatingPage = () => {
                               step="0.5"
                               value={playerRatings[player.id] || ''}
                               onChange={(e) => handleRatingChange(player.id, e.target.value)}
-                              placeholder="0-10"
+                              placeholder={player.sofascoreRating ? `Sugerida: ${player.sofascoreRating}` : "0-10"}
                               disabled={skipPlayers[player.id]}
                             />
                             <label className="skip-player-label">

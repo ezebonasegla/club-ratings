@@ -152,7 +152,8 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
           minutesPlayed: isSubstitute ? 0 : 90, // Suplentes empiezan con 0
           yellowCard: false,
           redCard: false,
-          played: !isSubstitute // Titulares siempre jugaron, suplentes por defecto no
+          played: !isSubstitute, // Titulares siempre jugaron, suplentes por defecto no
+          sofascoreRating: player.statistics?.rating || null // Valoración de Sofascore (1-10)
         };
         players.push(playerData);
       });
