@@ -375,23 +375,25 @@ const RatingPage = () => {
                       </div>
                     </div>
                     <div className="player-rating-input">
-                      <label htmlFor={`rating-${player.id}`}>Nota:</label>
+                      <div className="rating-input-wrapper">
+                        <label htmlFor={`rating-${player.id}`}>Tu Valoración:</label>
+                        <input
+                          id={`rating-${player.id}`}
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.5"
+                          value={playerRatings[player.id] || ''}
+                          onChange={(e) => handleRatingChange(player.id, e.target.value)}
+                          placeholder="0-10"
+                          disabled={skipPlayers[player.id]}
+                        />
+                      </div>
                       {player.sofascoreRating && (
-                        <span className="sofascore-rating-badge" title="Valoración de Sofascore">
-                          ⭐ {player.sofascoreRating}
+                        <span className="sofascore-rating-badge" title="Valoración sugerida por Sofascore">
+                          Sofascore sugiere: {player.sofascoreRating}
                         </span>
                       )}
-                      <input
-                        id={`rating-${player.id}`}
-                        type="number"
-                        min="0"
-                        max="10"
-                        step="0.5"
-                        value={playerRatings[player.id] || ''}
-                        onChange={(e) => handleRatingChange(player.id, e.target.value)}
-                        placeholder={player.sofascoreRating ? `Sugerida: ${player.sofascoreRating}` : "0-10"}
-                        disabled={skipPlayers[player.id]}
-                      />
                       <label className="skip-player-label">
                         <input
                           type="checkbox"
@@ -436,23 +438,25 @@ const RatingPage = () => {
                             </div>
                           </div>
                           <div className="player-rating-input">
-                            <label htmlFor={`rating-${player.id}`}>Nota:</label>
+                            <div className="rating-input-wrapper">
+                              <label htmlFor={`rating-${player.id}`}>Tu Valoración:</label>
+                              <input
+                                id={`rating-${player.id}`}
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="0.5"
+                                value={playerRatings[player.id] || ''}
+                                onChange={(e) => handleRatingChange(player.id, e.target.value)}
+                                placeholder="0-10"
+                                disabled={skipPlayers[player.id]}
+                              />
+                            </div>
                             {player.sofascoreRating && (
-                              <span className="sofascore-rating-badge" title="Valoración de Sofascore">
-                                ⭐ {player.sofascoreRating}
+                              <span className="sofascore-rating-badge" title="Valoración sugerida por Sofascore">
+                                Sofascore sugiere: {player.sofascoreRating}
                               </span>
                             )}
-                            <input
-                              id={`rating-${player.id}`}
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.5"
-                              value={playerRatings[player.id] || ''}
-                              onChange={(e) => handleRatingChange(player.id, e.target.value)}
-                              placeholder={player.sofascoreRating ? `Sugerida: ${player.sofascoreRating}` : "0-10"}
-                              disabled={skipPlayers[player.id]}
-                            />
                             <label className="skip-player-label">
                               <input
                                 type="checkbox"
