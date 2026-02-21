@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAllPlayersStatsFromCloud, getGeneralStatsFromCloud, getAllRatingsFromCloud } from '../services/cloudStorageService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Trophy, TrendingUp, Users, Calendar } from 'lucide-react';
 import './DashboardPage.css';
@@ -9,6 +10,7 @@ const COLORS = ['#E30613', '#FFFFFF', '#000000', '#FFD700', '#C0C0C0'];
 
 const DashboardPage = () => {
   const { user } = useAuth();
+  const { clubId, primaryClubId } = useTheme();
   const [playersStats, setPlayersStats] = useState([]);
   const [generalStats, setGeneralStats] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -17,17 +19,17 @@ const DashboardPage = () => {
   const [ratingDistributionData, setRatingDistributionData] = useState([]);
 
   useEffect(() => {
-    if (user) {
+    if (user && clubId) {
       loadStats();
     }
-  }, [user]);
+  }, [user, clubId]);
 
   const loadStats = async () => {
-    if (!user) return;
+    if (!user || !clubId) return;
     
     setLoading(true);
-    const playersResult = await getAllPlayersStatsFromCloud(user.uid);
-    const generalResult = await getGeneralStatsFromCloud(user.uid);
+    const playersResult = await getAllPlayersStatsFromCloud(user.uid, clubId, primaryClubId);
+    const generalResult = await getGeneralStatsFromCloud(user.uid, clubId, primaryClubId);
     const distributionData = await loadRatingDistribution();
     
     if (playersResult.success) {
@@ -79,11 +81,11 @@ const DashboardPage = () => {
 
   // Datos para gráfico de distribución de notas
   const loadRatingDistribution = async () => {
-    if (!user) return [];
+    if (!user || !clubId) return [];
     
     const distribution = { '0-4': 0, '4-5': 0, '5-6': 0, '6-7': 0, '7-8': 0, '8-10': 0 };
     
-    const ratingsResult = await getAllRatingsFromCloud(user.uid);
+    const ratingsResult = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId);
     if (ratingsResult.success) {
       ratingsResult.data.forEach(match => {
         match.players.forEach(player => {

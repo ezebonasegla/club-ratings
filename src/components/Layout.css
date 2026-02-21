@@ -58,6 +58,186 @@
 .logo-text h1 {
   margin: 0;
   font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.logo-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+/* Selector de clubes */
+.club-selector-container {
+  position: relative;
+  margin-left: 1rem;
+}
+
+.club-selector-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.club-selector-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.club-selector-text {
+  white-space: nowrap;
+}
+
+.club-selector-icon {
+  transition: transform 0.2s;
+}
+
+.club-selector-icon.open {
+  transform: rotate(180deg);
+}
+
+.club-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.club-selector-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 250px;
+  max-height: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.club-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #333;
+}
+
+.club-option:hover {
+  background: #f5f5f5;
+}
+
+.club-option.active {
+  background: linear-gradient(135deg, rgba(67, 160, 71, 0.1), rgba(56, 142, 60, 0.05));
+}
+
+.club-option-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.club-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.club-option-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.club-option-badge-text {
+  font-size: 0.75rem;
+  color: #43a047;
+  font-weight: 500;
+}
+
+/* Botón para agregar club */
+.add-club-option {
+  border-top: 1px solid #e0e0e0;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+}
+
+.add-club-option:hover {
+  background: rgba(67, 160, 71, 0.05);
+}
+
+.add-club-badge {
+  background: linear-gradient(135deg, #43a047, #66bb6a) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Header del dropdown de agregar club */
+.club-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 0.5rem;
+}
+
+.club-dropdown-back {
+  background: none;
+  border: none;
+  color: #43a047;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.club-dropdown-back:hover {
+  background: rgba(67, 160, 71, 0.1);
+}
+
+.club-dropdown-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.mobile-menu-toggle {
   font-weight: bold;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
@@ -364,10 +544,44 @@
   .logo-subtitle {
     font-size: 0.7rem;
   }
+
+  .club-selector-button {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .club-selector-text {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 @media (min-width: 969px) {
   .nav-link svg {
     flex-shrink: 0;
+  }
+}
+
+/* Responsive club selector para móvil */
+@media (max-width: 968px) {
+  .club-selector-container {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin-left: 0;
+  }
+
+  .club-selector-button {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .club-selector-dropdown {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    min-width: 220px;
   }
 }

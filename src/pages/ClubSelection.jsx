@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CLUBS } from '../config/clubs';
+import { CLUBS, getClubsByCategory } from '../config/clubs';
 import { setUserClub } from '../services/cloudUserConfigService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,7 @@ const ClubSelection = () => {
   const navigate = useNavigate();
   const { changeClub } = useTheme();
   const { user } = useAuth();
+  const clubsByCategory = getClubsByCategory();
 
   const handleClubClick = (club) => {
     setSelectedClub(club);
@@ -50,33 +51,71 @@ const ClubSelection = () => {
           <p>Elige el equipo del que sos hincha para personalizar la aplicación</p>
         </div>
 
-        <div className="clubs-grid">
-          {CLUBS.map(club => (
-            <div
-              key={club.id}
-              className={`club-card ${selectedClub?.id === club.id ? 'selected' : ''}`}
-              onClick={() => handleClubClick(club)}
-              style={{
-                '--club-primary': club.colors.primary,
-                '--club-secondary': club.colors.secondary
-              }}
-            >
-              <div 
-                className="club-colors"
+        {/* Clubes Argentinos */}
+        <div className="category-section">
+          <h2 className="category-title">🇦🇷 Liga Argentina</h2>
+          <div className="clubs-grid">
+            {clubsByCategory.argentina.map(club => (
+              <div
+                key={club.id}
+                className={`club-card ${selectedClub?.id === club.id ? 'selected' : ''}`}
+                onClick={() => handleClubClick(club)}
                 style={{
-                  background: `linear-gradient(135deg, ${club.colors.primary} 0%, ${club.colors.primary} 50%, ${club.colors.secondary} 50%, ${club.colors.secondary} 100%)`
+                  '--club-primary': club.colors.primary,
+                  '--club-secondary': club.colors.secondary
                 }}
-              />
-              <div className="club-info">
-                <h3>{club.shortName}</h3>
-                <p>{club.name}</p>
+              >
+                <div 
+                  className="club-colors"
+                  style={{
+                    background: `linear-gradient(135deg, ${club.colors.primary} 0%, ${club.colors.primary} 50%, ${club.colors.secondary} 50%, ${club.colors.secondary} 100%)`
+                  }}
+                />
+                <div className="club-info">
+                  <h3>{club.shortName}</h3>
+                  <p>{club.name}</p>
+                </div>
+                {selectedClub?.id === club.id && (
+                  <div className="selected-badge">✓</div>
+                )}
               </div>
-              {selectedClub?.id === club.id && (
-                <div className="selected-badge">✓</div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {/* Clubes Internacionales */}
+        {clubsByCategory.internacional.length > 0 && (
+          <div className="category-section">
+            <h2 className="category-title">🌍 Resto del Mundo</h2>
+            <div className="clubs-grid">
+              {clubsByCategory.internacional.map(club => (
+                <div
+                  key={club.id}
+                  className={`club-card ${selectedClub?.id === club.id ? 'selected' : ''}`}
+                  onClick={() => handleClubClick(club)}
+                  style={{
+                    '--club-primary': club.colors.primary,
+                    '--club-secondary': club.colors.secondary
+                  }}
+                >
+                  <div 
+                    className="club-colors"
+                    style={{
+                      background: `linear-gradient(135deg, ${club.colors.primary} 0%, ${club.colors.primary} 50%, ${club.colors.secondary} 50%, ${club.colors.secondary} 100%)`
+                    }}
+                  />
+                  <div className="club-info">
+                    <h3>{club.shortName}</h3>
+                    <p>{club.name}</p>
+                  </div>
+                  {selectedClub?.id === club.id && (
+                    <div className="selected-badge">✓</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {selectedClub && (
           <div className="confirmation-section">

@@ -2,21 +2,42 @@ import axios from 'axios';
 
 /**
  * Servicio para extraer información de partidos desde Sofascore
- * Usa Vercel Serverless Function como proxy para evitar CORS y 403
+ * En desarrollo: peticiones directas a Sofascore (sin proxy)
+ * En producción: usa Vercel Serverless Function con ScraperAPI
  */
 
-// Proxy URL - En producción usa /api/sofascore, en desarrollo localhost
-const PROXY_URL = import.meta.env.DEV 
-  ? 'http://localhost:5173/api/sofascore'
-  : '/api/sofascore';
+// Detectar si estamos en desarrollo o producción
+const IS_DEV = import.meta.env.DEV;
+
+// Proxy URL - Solo usado en producción
+const PROXY_URL = '/api/sofascore';
 
 /**
- * Función helper para hacer peticiones a través del proxy
+ * Función helper para hacer peticiones
+ * En desarrollo: petición directa a Sofascore
+ * En producción: a través del proxy con ScraperAPI
  */
-const fetchThroughProxy = async (url) => {
-  const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
-  const response = await axios.get(proxyUrl);
-  return response;
+const fetchFromSofascore = async (url) => {
+  if (IS_DEV) {
+    // En desarrollo: petición directa sin proxy
+    console.log('🔵 DEV: Petición directa a Sofascore (sin ScraperAPI):', url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'es-ES,es;q=0.9',
+        'Referer': 'https://www.sofascore.com/',
+        'Origin': 'https://www.sofascore.com'
+      }
+    });
+    return response;
+  } else {
+    // En producción: a través del proxy con ScraperAPI
+    console.log('🟢 PROD: Petición a través de proxy con ScraperAPI');
+    const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+    const response = await axios.get(proxyUrl);
+    return response;
+  }
 };
 
 /**
@@ -32,14 +53,54 @@ export const extractMatchId = (url) => {
  * @param {string} clubName - Nombre o nombre corto del club
  * @param {string} homeTeam - Nombre del equipo local
  * @param {string} awayTeam - Nombre del equipo visitante
+ * @param {number} clubSofascoreId - ID de Sofascore del club (opcional)
+ * @param {number} homeTeamId - ID del equipo local (opcional)
+ * @param {number} awayTeamId - ID del equipo visitante (opcional)
  */
-export const isMatchFromClub = (clubName, homeTeam, awayTeam) => {
-  const normalizedClubName = clubName.toLowerCase();
-  const normalizedHome = homeTeam.toLowerCase();
-  const normalizedAway = awayTeam.toLowerCase();
+export const isMatchFromClub = (clubName, homeTeam, awayTeam, clubSofascoreId = null, homeTeamId = null, awayTeamId = null) => {
+  // Si tenemos IDs de Sofascore, usarlos para comparación exacta (método más confiable)
+  if (clubSofascoreId && (homeTeamId || awayTeamId)) {
+    return clubSofascoreId === homeTeamId || clubSofascoreId === awayTeamId;
+  }
   
-  return normalizedHome.includes(normalizedClubName) || 
-         normalizedAway.includes(normalizedClubName);
+  const normalizedClubName = clubName.toLowerCase().trim();
+  const normalizedHome = homeTeam.toLowerCase().trim();
+  const normalizedAway = awayTeam.toLowerCase().trim();
+  
+  // Primero intentar comparación exacta
+  if (normalizedHome === normalizedClubName || normalizedAway === normalizedClubName) {
+    return true;
+  }
+  
+  // Si no hay match exacto, verificar que el nombre del club esté presente
+  // pero asegurándonos de que no es parte de otro nombre más largo
+  const homeMatch = normalizedHome.includes(normalizedClubName);
+  const awayMatch = normalizedAway.includes(normalizedClubName);
+  
+  // Verificar que si hay match, no sea un falso positivo
+  // (ej: "independiente" no debe matchear con "independiente rivadavia")
+  if (homeMatch) {
+    // Si el nombre del equipo es más largo que el del club, verificar que no sea otro equipo
+    if (normalizedHome.length > normalizedClubName.length) {
+      // Si hay palabras adicionales después del nombre del club, es probablemente otro equipo
+      const words = normalizedHome.split(/\s+/);
+      const clubWords = normalizedClubName.split(/\s+/);
+      // Verificar que todas las palabras del club estén presentes en el mismo orden
+      return words.join(' ').startsWith(clubWords.join(' '));
+    }
+    return true;
+  }
+  
+  if (awayMatch) {
+    if (normalizedAway.length > normalizedClubName.length) {
+      const words = normalizedAway.split(/\s+/);
+      const clubWords = normalizedClubName.split(/\s+/);
+      return words.join(' ').startsWith(clubWords.join(' '));
+    }
+    return true;
+  }
+  
+  return false;
 };
 
 /**
@@ -60,11 +121,11 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
     const incidentsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
 
-    // Hacer peticiones en paralelo a través del proxy
+    // Hacer peticiones en paralelo (directas en DEV, proxy en PROD)
     const [eventResponse, lineupsResponse, incidentsResponse] = await Promise.all([
-      fetchThroughProxy(eventUrl),
-      fetchThroughProxy(lineupsUrl),
-      fetchThroughProxy(incidentsUrl)
+      fetchFromSofascore(eventUrl),
+      fetchFromSofascore(lineupsUrl),
+      fetchFromSofascore(incidentsUrl)
     ]);
 
     const eventData = eventResponse.data.event;
@@ -88,8 +149,25 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
 
     // Si se proporcionó un club de usuario, verificar que el partido sea de ese club
     if (userClub) {
-      const isFromUserClub = isMatchFromClub(userClub.shortName, eventData.homeTeam.name, eventData.awayTeam.name) ||
-                             isMatchFromClub(userClub.name, eventData.homeTeam.name, eventData.awayTeam.name);
+      const homeTeamId = eventData.homeTeam.id;
+      const awayTeamId = eventData.awayTeam.id;
+      const clubSofascoreId = userClub.sofascoreId;
+      
+      const isFromUserClub = isMatchFromClub(
+        userClub.shortName, 
+        eventData.homeTeam.name, 
+        eventData.awayTeam.name,
+        clubSofascoreId,
+        homeTeamId,
+        awayTeamId
+      ) || isMatchFromClub(
+        userClub.name, 
+        eventData.homeTeam.name, 
+        eventData.awayTeam.name,
+        clubSofascoreId,
+        homeTeamId,
+        awayTeamId
+      );
       
       if (!isFromUserClub) {
         throw new Error(`Este partido no es de ${userClub.name}. Por favor, ingresa un partido de tu club.`);
@@ -100,8 +178,18 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     let isUserTeamHome, userTeam, rival;
     
     if (userClub) {
-      isUserTeamHome = isMatchFromClub(userClub.shortName, eventData.homeTeam.name, '') ||
-                       isMatchFromClub(userClub.name, eventData.homeTeam.name, '');
+      const homeTeamId = eventData.homeTeam.id;
+      const awayTeamId = eventData.awayTeam.id;
+      const clubSofascoreId = userClub.sofascoreId;
+      
+      // Verificar si es el equipo local usando IDs (más confiable)
+      if (clubSofascoreId) {
+        isUserTeamHome = homeTeamId === clubSofascoreId;
+      } else {
+        // Fallback a comparación por nombre
+        isUserTeamHome = isMatchFromClub(userClub.shortName, eventData.homeTeam.name, '', clubSofascoreId, homeTeamId, null) ||
+                         isMatchFromClub(userClub.name, eventData.homeTeam.name, '', clubSofascoreId, homeTeamId, null);
+      }
     } else {
       // Fallback para compatibilidad con código existente (busca River)
       isUserTeamHome = eventData.homeTeam.name.includes('River');
@@ -242,7 +330,7 @@ export const getLastMatchUrl = async (teamId) => {
   try {
     // Obtener los últimos eventos del equipo
     const eventsUrl = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
-    const response = await fetchThroughProxy(eventsUrl);
+    const response = await fetchFromSofascore(eventsUrl);
     
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
     

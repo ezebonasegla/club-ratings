@@ -8,13 +8,14 @@ import './ManageRatings.css';
 
 const ManageRatings = () => {
   const { user } = useAuth();
-  const { club } = useTheme();
+  const { club, clubId, primaryClubId } = useTheme();
   const [ratings, setRatings] = useState([]);
   const [editingRating, setEditingRating] = useState(null);
   const [playerRatings, setPlayerRatings] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [sharingRating, setSharingRating] = useState(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -43,16 +44,16 @@ const ManageRatings = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && clubId) {
       loadRatings();
     }
-  }, [user]);
+  }, [user, clubId]);
 
   const loadRatings = async () => {
-    if (!user) return;
+    if (!user || !clubId) return;
     
     setLoading(true);
-    const result = await getAllRatingsFromCloud(user.uid);
+    const result = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId);
     
     if (result.success) {
       setRatings(result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
@@ -78,13 +79,18 @@ const ManageRatings = () => {
   };
 
   const handleDelete = async (ratingId) => {
-    const result = await deleteRatingFromCloud(ratingId, user.uid);
-    
-    if (result.success) {
-      loadRatings();
-      setShowDeleteConfirm(null);
-    } else {
-      alert('Error al eliminar la valoración');
+    setDeleting(true);
+    try {
+      const result = await deleteRatingFromCloud(ratingId, user.uid);
+      
+      if (result.success) {
+        loadRatings();
+        setShowDeleteConfirm(null);
+      } else {
+        alert('Error al eliminar la valoración');
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -297,14 +303,23 @@ const ManageRatings = () => {
                         <button
                           className="btn-cancel"
                           onClick={() => setShowDeleteConfirm(null)}
+                          disabled={deleting}
                         >
                           Cancelar
                         </button>
                         <button
                           className="btn-confirm-delete"
                           onClick={() => handleDelete(rating.id)}
+                          disabled={deleting}
                         >
-                          Eliminar
+                          {deleting ? (
+                            <>
+                              <Loader size={18} className="spinner" />
+                              Eliminando...
+                            </>
+                          ) : (
+                            'Eliminar'
+                          )}
                         </button>
                       </div>
                     </div>

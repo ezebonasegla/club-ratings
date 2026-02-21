@@ -7,7 +7,7 @@ import { Loader, AlertCircle, Check, Calendar, X, HelpCircle } from 'lucide-reac
 import './RatingPage.css';
 
 const RatingPage = () => {
-  const { club } = useTheme();
+  const { club, clubId } = useTheme();
   const { user } = useAuth();
   const [matchUrl, setMatchUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -175,7 +175,7 @@ const RatingPage = () => {
 
     try {
       setSaving(true);
-      const result = await saveRatingToCloud(ratingData, user.uid);
+      const result = await saveRatingToCloud(ratingData, user.uid, clubId);
       
       if (result.success) {
         setSaved(true);
@@ -323,25 +323,25 @@ const RatingPage = () => {
               <h2>Información del Partido</h2>
               <div className="info-grid">
                 <div className="info-item">
-                  <span className="info-label">Fecha:</span>
-                  <span className="info-value">{matchData.matchInfo.date}</span>
+                  <span className="match-info-label">Fecha:</span>
+                  <span className="match-info-value">{matchData.matchInfo.date}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Rival:</span>
-                  <span className="info-value">{matchData.matchInfo.rival}</span>
+                  <span className="match-info-label">Rival:</span>
+                  <span className="match-info-value">{matchData.matchInfo.rival}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Resultado:</span>
-                  <span className="info-value">{matchData.matchInfo.score}</span>
+                  <span className="match-info-label">Resultado:</span>
+                  <span className="match-info-value">{matchData.matchInfo.score}</span>
                 </div>
                 <div className="info-item">
-                  <span className="info-label">Competición:</span>
-                  <span className="info-value">{matchData.matchInfo.competition}</span>
+                  <span className="match-info-label">Competición:</span>
+                  <span className="match-info-value">{matchData.matchInfo.competition}</span>
                 </div>
                 {matchData.matchInfo.round && (
                   <div className="info-item">
-                    <span className="info-label">Fecha:</span>
-                    <span className="info-value">{matchData.matchInfo.round}</span>
+                    <span className="match-info-label">Fecha:</span>
+                    <span className="match-info-value">{matchData.matchInfo.round}</span>
                   </div>
                 )}
               </div>

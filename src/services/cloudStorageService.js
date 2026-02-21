@@ -20,12 +20,14 @@ const RATINGS_COLLECTION = 'ratings';
  * Guardar una valoración en Firestore
  * @param {Object} rating - Objeto con la valoración del partido
  * @param {string} userId - ID del usuario autenticado
+ * @param {string} clubId - ID del club (opcional, para compatibilidad)
  */
-export const saveRatingToCloud = async (rating, userId) => {
+export const saveRatingToCloud = async (rating, userId, clubId = null) => {
   try {
     const ratingWithUser = {
       ...rating,
       userId,
+      clubId: clubId || rating.clubId || null, // Prioridad: parámetro > rating.clubId > null
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -41,9 +43,12 @@ export const saveRatingToCloud = async (rating, userId) => {
 /**
  * Obtener todas las valoraciones del usuario
  * @param {string} userId - ID del usuario autenticado
+ * @param {string} clubId - (Opcional) ID del club para filtrar
+ * @param {string} primaryClubId - (Opcional) ID del club principal para compatibilidad con datos antiguos
  */
-export const getAllRatingsFromCloud = async (userId) => {
+export const getAllRatingsFromCloud = async (userId, clubId = null, primaryClubId = null) => {
   try {
+    // Siempre traer todas las valoraciones del usuario
     const q = query(
       collection(db, RATINGS_COLLECTION),
       where('userId', '==', userId),
@@ -51,7 +56,7 @@ export const getAllRatingsFromCloud = async (userId) => {
     );
 
     const querySnapshot = await getDocs(q);
-    const ratings = [];
+    let ratings = [];
     
     querySnapshot.forEach((doc) => {
       ratings.push({
@@ -59,6 +64,18 @@ export const getAllRatingsFromCloud = async (userId) => {
         ...doc.data()
       });
     });
+
+    // Si se especifica clubId, filtrar en cliente
+    if (clubId) {
+      ratings = ratings.filter(rating => {
+        // Si la valoración tiene clubId, debe coincidir exactamente
+        if (rating.clubId) {
+          return rating.clubId === clubId;
+        }
+        // Si la valoración NO tiene clubId (datos antiguos), solo mostrarla en el club principal
+        return clubId === primaryClubId;
+      });
+    }
 
     return { success: true, data: ratings };
   } catch (error) {
@@ -256,10 +273,12 @@ export const getPlayerStatsFromCloud = async (playerId, userId) => {
 /**
  * Obtener estadísticas de todos los jugadores
  * @param {string} userId - ID del usuario autenticado
+ * @param {string} clubId - (Opcional) ID del club para filtrar
+ * @param {string} primaryClubId - (Opcional) ID del club principal para compatibilidad
  */
-export const getAllPlayersStatsFromCloud = async (userId) => {
+export const getAllPlayersStatsFromCloud = async (userId, clubId = null, primaryClubId = null) => {
   try {
-    const ratingsResult = await getAllRatingsFromCloud(userId);
+    const ratingsResult = await getAllRatingsFromCloud(userId, clubId, primaryClubId);
     if (!ratingsResult.success) {
       return { success: false, error: ratingsResult.error };
     }
@@ -320,10 +339,12 @@ export const getAllPlayersStatsFromCloud = async (userId) => {
 /**
  * Obtener estadísticas generales
  * @param {string} userId - ID del usuario autenticado
+ * @param {string} clubId - (Opcional) ID del club para filtrar
+ * @param {string} primaryClubId - (Opcional) ID del club principal para compatibilidad
  */
-export const getGeneralStatsFromCloud = async (userId) => {
+export const getGeneralStatsFromCloud = async (userId, clubId = null, primaryClubId = null) => {
   try {
-    const ratingsResult = await getAllRatingsFromCloud(userId);
+    const ratingsResult = await getAllRatingsFromCloud(userId, clubId, primaryClubId);
     if (!ratingsResult.success) {
       return { success: false, error: ratingsResult.error };
     }

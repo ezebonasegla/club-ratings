@@ -395,6 +395,59 @@ export const CLUBS = [
       textSecondary: '#333333'
     },
     sofascoreId: 4936
+  },
+  // Resto del Mundo
+  {
+    id: 'manchester-united',
+    name: 'Manchester United',
+    shortName: 'Man United',
+    colors: {
+      primary: '#DA291C',
+      secondary: '#000000',
+      text: '#FFFFFF',
+      textSecondary: '#FFFFFF'
+    },
+    sofascoreId: 35,
+    category: 'internacional'
+  },
+  {
+    id: 'manchester-city',
+    name: 'Manchester City',
+    shortName: 'Man City',
+    colors: {
+      primary: '#6CABDD',
+      secondary: '#FFFFFF',
+      text: '#FFFFFF',
+      textSecondary: '#333333'
+    },
+    sofascoreId: 17,
+    category: 'internacional'
+  },
+  {
+    id: 'aston-villa',
+    name: 'Aston Villa',
+    shortName: 'Aston Villa',
+    colors: {
+      primary: '#670E36',
+      secondary: '#95BFE5',
+      text: '#FFFFFF',
+      textSecondary: '#333333'
+    },
+    sofascoreId: 40,
+    category: 'internacional'
+  },
+  {
+    id: 'nottingham-forest',
+    name: 'Nottingham Forest',
+    shortName: 'Nott\'m Forest',
+    colors: {
+      primary: '#DD0000',
+      secondary: '#FFFFFF',
+      text: '#FFFFFF',
+      textSecondary: '#333333'
+    },
+    sofascoreId: 14,
+    category: 'internacional'
   }
 ];
 
@@ -411,4 +464,14 @@ export const getClubByName = (name) => {
 
 export const getClubBySofascoreId = (sofascoreId) => {
   return CLUBS.find(club => club.sofascoreId === sofascoreId);
+};
+
+export const getClubsByCategory = () => {
+  const argentinos = CLUBS.filter(club => !club.category || club.category === 'argentina');
+  const internacionales = CLUBS.filter(club => club.category === 'internacional');
+  
+  return {
+    argentina: argentinos,
+    internacional: internacionales
+  };
 };

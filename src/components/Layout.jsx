@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X } from 'lucide-react';
+import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { addSecondaryClub } from '../services/cloudUserConfigService';
+import { CLUBS } from '../config/clubs';
 import './Layout.css';
 
 const Layout = () => {
-  const { club } = useTheme();
+  const { club, allClubs, switchActiveClub, primaryClubId, secondaryClubIds, refreshUserClubs } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [clubSelectorOpen, setClubSelectorOpen] = useState(false);
+  const [showAddClubMenu, setShowAddClubMenu] = useState(false);
+  const [switchingClub, setSwitchingClub] = useState(false);
+  const [addingClub, setAddingClub] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -20,6 +26,42 @@ const Layout = () => {
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
   };
+
+  const handleClubChange = async (clubId) => {
+    setSwitchingClub(true);
+    try {
+      const result = await switchActiveClub(clubId);
+      if (result.success) {
+        setClubSelectorOpen(false);
+        setShowAddClubMenu(false);
+      }
+    } finally {
+      setSwitchingClub(false);
+    }
+  };
+
+  const handleAddSecondaryClub = async (clubId) => {
+    setAddingClub(true);
+    try {
+      await addSecondaryClub(user.uid, clubId);
+      await refreshUserClubs();
+      setShowAddClubMenu(false);
+      setClubSelectorOpen(false);
+    } catch (error) {
+      console.error('Error al agregar club secundario:', error);
+      alert('Error al agregar el club');
+    } finally {
+      setAddingClub(false);
+    }
+  };
+
+  // Calcular clubes disponibles para agregar
+  const allClubIds = [primaryClubId, ...(secondaryClubIds || [])];
+  const availableClubs = CLUBS.filter(c => !allClubIds.includes(c.id));
+  const canAddSecondaryClub = secondaryClubIds && secondaryClubIds.length < 2;
+
+  // Mostrar selector si hay más de un club O si se pueden agregar clubes secundarios
+  const showClubSelector = (allClubs && allClubs.length > 1) || (canAddSecondaryClub && availableClubs.length > 0);
 
   return (
     <div className="app-layout">
@@ -34,6 +76,123 @@ const Layout = () => {
               <span className="logo-subtitle">Sistema de Valoraciones</span>
             </div>
           </div>
+
+          {/* Selector de clubes - solo si hay más de uno */}
+          {showClubSelector && (
+            <div className="club-selector-container">
+              <button 
+                className="club-selector-button"
+                onClick={() => setClubSelectorOpen(!clubSelectorOpen)}
+                title="Cambiar club"
+              >
+                <span className="club-selector-text">{club?.shortName || 'Club'}</span>
+                <ChevronDown size={16} className={`club-selector-icon ${clubSelectorOpen ? 'open' : ''}`} />
+              </button>
+              
+              {clubSelectorOpen && (
+                <>
+                  <div 
+                    className="club-selector-overlay" 
+                    onClick={() => {
+                      setClubSelectorOpen(false);
+                      setShowAddClubMenu(false);
+                    }}
+                  />
+                  <div className="club-selector-dropdown">
+                    {!showAddClubMenu ? (
+                      <>
+                        {allClubs.map((c) => (
+                          <button
+                            key={c.id}
+                            className={`club-option ${c.id === club?.id ? 'active' : ''}`}
+                            onClick={() => handleClubChange(c.id)}
+                            disabled={switchingClub || addingClub}
+                          >
+                            <div 
+                              className="club-option-badge"
+                              style={{
+                                background: `linear-gradient(135deg, ${c.colors.primary}, ${c.colors.secondary})`
+                              }}
+                            />
+                            <div className="club-option-info">
+                              <span className="club-option-name">
+                                {switchingClub && c.id === club?.id ? (
+                                  <>
+                                    <Loader size={14} className="spinner inline-spinner" />
+                                    Cambiando...
+                                  </>
+                                ) : (
+                                  c.name
+                                )}
+                              </span>
+                              {c.id === primaryClubId && (
+                                <span className="club-option-badge-text">Principal</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                        
+                        {/* Botón para agregar club secundario */}
+                        {canAddSecondaryClub && availableClubs.length > 0 && (
+                          <button
+                            className="club-option add-club-option"
+                            onClick={() => setShowAddClubMenu(true)}
+                            disabled={switchingClub || addingClub}
+                          >
+                            <div className="club-option-badge add-club-badge">
+                              <Plus size={18} />
+                            </div>
+                            <div className="club-option-info">
+                              <span className="club-option-name">Agregar Club</span>
+                            </div>
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="club-dropdown-header">
+                          <button 
+                            className="club-dropdown-back"
+                            onClick={() => setShowAddClubMenu(false)}
+                          >
+                            ← Volver
+                          </button>
+                          <span className="club-dropdown-title">Seleccionar Club</span>
+                        </div>
+                        {availableClubs.map((c) => (
+                          <button
+                            key={c.id}
+                            className="club-option"
+                            onClick={() => handleAddSecondaryClub(c.id)}
+                            disabled={addingClub}
+                          >
+                            <div 
+                              className="club-option-badge"
+                              style={{
+                                background: `linear-gradient(135deg, ${c.colors.primary}, ${c.colors.secondary})`
+                              }}
+                            />
+                            <div className="club-option-info">
+                              <span className="club-option-name">
+                                {addingClub ? (
+                                  <>
+                                    <Loader size={14} className="spinner inline-spinner" />
+                                    Agregando...
+                                  </>
+                                ) : (
+                                  c.name
+                                )}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           
           <button 
             className="mobile-menu-toggle"

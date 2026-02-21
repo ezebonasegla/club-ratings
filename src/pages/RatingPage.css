@@ -518,7 +518,7 @@ h2 {
   transform: translateX(4px);
 }
 
-.info-label {
+.match-info-label {
   font-weight: 600;
   color: #666 !important;
   font-size: 0.9rem;
@@ -527,7 +527,7 @@ h2 {
   text-shadow: none;
 }
 
-.info-value {
+.match-info-value {
   font-size: 1.2rem;
   color: #1a1a1a !important;
   font-weight: 600;
