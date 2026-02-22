@@ -1,5 +1,7 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, storage } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { updateProfile } from 'firebase/auth';
 
 /**
  * Servicio para manejar la configuración del usuario en Firestore
@@ -213,6 +215,39 @@ export const removeSecondaryClub = async (userId, clubId) => {
     return await saveUserConfig(userId, updates);
   } catch (error) {
     console.error('Error al eliminar club secundario:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Actualizar foto de perfil del usuario
+ * @param {string} userId - ID del usuario
+ * @param {File} file - Archivo de imagen
+ */
+export const updateUserPhoto = async (userId, file) => {
+  try {
+    // Crear referencia al archivo en Storage
+    const timestamp = Date.now();
+    const storageRef = ref(storage, `profile-photos/${userId}/${timestamp}`);
+    
+    // Subir archivo
+    await uploadBytes(storageRef, file);
+    
+    // Obtener URL de descarga
+    const photoURL = await getDownloadURL(storageRef);
+    
+    // Actualizar en Firestore
+    await saveUserConfig(userId, { photoURL });
+    
+    // Actualizar en Auth (para que se refleje en user.photoURL)
+    const auth = await import('../config/firebase').then(m => m.auth);
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, { photoURL });
+    }
+    
+    return { success: true, photoURL };
+  } catch (error) {
+    console.error('Error al actualizar foto:', error);
     return { success: false, error: error.message };
   }
 };
