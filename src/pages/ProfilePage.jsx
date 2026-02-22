@@ -7,19 +7,17 @@ import {
   setUserClub, 
   addSecondaryClub, 
   removeSecondaryClub,
-  getUserConfig,
-  updateUserPhoto
+  getUserConfig
 } from '../services/cloudUserConfigService';
 import { deleteAllUserRatings } from '../services/cloudStorageService';
 import { updateFriendId, isFriendIdAvailable } from '../services/friendsService';
-import { User, Mail, Shield, AlertTriangle, Loader, Plus, X, Copy, Check, Edit2, Users as UsersIcon, Camera } from 'lucide-react';
+import { User, Mail, Shield, AlertTriangle, Loader, Plus, X, Copy, Check, Edit2, Users as UsersIcon } from 'lucide-react';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
   const { club, changeClub, primaryClubId, secondaryClubIds, allClubs, refreshUserClubs } = useTheme();
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
   const [showChangeClub, setShowChangeClub] = useState(false);
   const [showAddSecondary, setShowAddSecondary] = useState(false);
   const [selectedNewClub, setSelectedNewClub] = useState(null);
@@ -27,7 +25,6 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [removingClub, setRemovingClub] = useState(null);
   const [addingClub, setAddingClub] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   // Estados para Friend ID
   const [friendId, setFriendId] = useState('');
@@ -208,40 +205,6 @@ const ProfilePage = () => {
   // Verificar si puede agregar más clubes
   const canAddSecondaryClub = secondaryClubIds.length < 2;
 
-  const handlePhotoChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Validar tipo de archivo
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona una imagen válida');
-      return;
-    }
-
-    // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es demasiado grande. Máximo 5MB');
-      return;
-    }
-
-    try {
-      setUploadingPhoto(true);
-      const result = await updateUserPhoto(user.uid, file);
-      
-      if (result.success) {
-        // Recargar la página para actualizar la foto en todos lados
-        window.location.reload();
-      } else {
-        alert('Error al subir la foto: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      alert('Error al subir la foto');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
   return (
     <div className="profile-page">
       <div className="profile-container">
@@ -261,20 +224,6 @@ const ProfilePage = () => {
                 <User size={64} />
               </div>
             )}
-            <button 
-              className="btn-change-photo" 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
-            >
-              {uploadingPhoto ? <Loader className="spinning" size={20} /> : <Camera size={20} />}
-            </button>
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              accept="image/*" 
-              onChange={handlePhotoChange}
-              style={{ display: 'none' }}
-            />
           </div>
           <h1>{user?.displayName || 'Usuario'}</h1>
           <p className="profile-subtitle">Perfil de usuario</p>

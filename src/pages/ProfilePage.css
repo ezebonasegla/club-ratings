@@ -22,14 +22,13 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  overflow: visible;
+  overflow: hidden;
   margin: 0 auto 1rem;
   border: 4px solid var(--primary-color);
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .profile-avatar-large img {
@@ -37,49 +36,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 50%;
-}
-
-.btn-change-photo {
-  position: absolute;
-  bottom: -5px;
-  right: -5px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  border: 3px solid #1a1a2e;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.btn-change-photo:hover:not(:disabled) {
-  background: var(--secondary-color);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.btn-change-photo:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-change-photo .spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .profile-avatar-fallback {
