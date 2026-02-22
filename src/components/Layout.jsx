@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader } from 'lucide-react';
+import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader, Users } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { addSecondaryClub } from '../services/cloudUserConfigService';
 import { CLUBS } from '../config/clubs';
+import NotificationBell from './NotificationBell';
 import './Layout.css';
 
 const Layout = () => {
@@ -67,16 +68,6 @@ const Layout = () => {
     <div className="app-layout">
       <header className="app-header">
         <div className="header-content">
-          <div className="logo">
-            <div className="logo-badge">
-              <Shield size={28} strokeWidth={2.5} />
-            </div>
-            <div className="logo-text">
-              <h1>{club?.shortName || 'Valoraciones'}</h1>
-              <span className="logo-subtitle">Sistema de Valoraciones</span>
-            </div>
-          </div>
-
           {/* Selector de clubes - solo si hay más de uno */}
           {showClubSelector && (
             <div className="club-selector-container">
@@ -194,6 +185,9 @@ const Layout = () => {
             </div>
           )}
           
+          {/* Campanita de notificaciones - siempre visible */}
+          {user && <NotificationBell />}
+          
           <button 
             className="mobile-menu-toggle"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -218,6 +212,14 @@ const Layout = () => {
             >
               <BarChart3 size={20} />
               <span>Dashboard</span>
+            </NavLink>
+            <NavLink 
+              to="/friends" 
+              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              onClick={closeMobileMenu}
+            >
+              <Users size={20} />
+              <span>Amigos</span>
             </NavLink>
             <NavLink 
               to="/manage" 

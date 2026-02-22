@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Reglas para usuarios
+    match /users/{userId} {
+      // Cualquiera autenticado puede leer perfiles de usuarios
+      allow read: if request.auth != null;
+      // Solo el propio usuario puede escribir su perfil
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para valoraciones
+    match /ratings/{ratingId} {
+      // Cualquiera autenticado puede leer valoraciones
+      allow read: if request.auth != null;
+      // Solo el propietario puede crear/actualizar/eliminar sus valoraciones
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para solicitudes de amistad
+    match /friendRequests/{requestId} {
+      // Puede leer si es el remitente o el receptor
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.receiverId);
+      // Puede crear si es el remitente
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.senderId;
+      // Puede actualizar/eliminar si es el receptor o el remitente
+      allow update, delete: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.receiverId);
+    }
+    
+    // Reglas para comentarios
+    match /comments/{commentId} {
+      // Cualquiera autenticado puede leer comentarios
+      allow read: if request.auth != null;
+      // Solo usuarios autenticados pueden crear comentarios
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Solo el propietario puede eliminar su comentario
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para notificaciones
+    match /notifications/{notificationId} {
+      // Solo el usuario destinatario puede leer sus notificaciones
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Cualquier usuario autenticado puede crear notificaciones
+      allow create: if request.auth != null;
+      // Solo el propietario puede actualizar sus notificaciones
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Solo el propietario puede eliminar sus notificaciones
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+  }
+}

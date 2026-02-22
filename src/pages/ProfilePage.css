@@ -483,6 +483,141 @@
   cursor: not-allowed;
 }
 
+/* Friend ID Section */
+.friend-id-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.friend-id-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.friend-id-loading .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.friend-id-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.9rem;
+}
+
+.friend-id-code {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 1.5rem 3rem;
+  border-radius: 12px;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5rem;
+  font-family: monospace;
+  color: white;
+  text-align: center;
+}
+
+.friend-id-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-friend-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-friend-action:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-friend-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.friend-id-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.friend-id-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.friend-id-input {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.5rem;
+  font-family: monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.friend-id-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.friend-id-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.friend-id-error {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.friend-id-edit-actions {
+  display: flex;
+  gap: 1rem;
+}
+
 @media (max-width: 768px) {
   .profile-page {
     padding: 1rem;

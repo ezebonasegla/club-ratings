@@ -32,39 +32,10 @@
   gap: 2rem;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.logo-badge {
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--primary-color);
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s;
-}
-
-.logo-badge:hover {
-  transform: scale(1.05);
-}
-
-.logo-text h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.logo-subtitle {
-  font-size: 0.75rem;
-  opacity: 0.85;
-  font-weight: 400;
+/* NotificationBell en el header principal - siempre visible */
+.header-content > .notification-bell-container {
+  display: flex !important;
+  margin-left: auto;
 }
 
 /* Selector de clubes */
@@ -244,15 +215,6 @@
   letter-spacing: 0.5px;
 }
 
-.logo-subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.85);
-  display: block;
-  margin-top: -2px;
-  font-weight: 500;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-}
-
 .main-nav {
   display: flex;
   gap: 1rem;
@@ -288,6 +250,17 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.user-menu .notification-bell-container {
+  display: none !important; /* Ocultarla del user-menu ya que está en el header */
+}
+
+/* Asegurar que el bell siempre esté visible en móvil también */
+@media (max-width: 968px) {
+  .user-menu .notification-bell-container {
+    display: none !important; /* Ocultarla del menú móvil */
+  }
 }
 
 .user-info {
@@ -404,30 +377,27 @@
 @media (max-width: 968px) {
   .header-content {
     padding: 1rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     position: relative;
+    gap: 0.5rem;
+  }
+
+  /* NotificationBell en móvil - visible junto a hamburguesa */
+  .header-content > .notification-bell-container {
+    display: flex !important;
+    margin-left: auto;
+    margin-right: 0.5rem;
   }
 
   .mobile-menu-toggle {
     display: flex;
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
     z-index: 101;
   }
 
-  .logo {
-    flex: 0 0 auto;
-  }
-
-  .logo-text h1 {
-    font-size: 1.3rem;
-  }
-
-  .logo-subtitle {
-    font-size: 0.75rem;
-  }
 
   /* Men\u00fa de navegaci\u00f3n m\u00f3vil */
   .main-nav {
@@ -527,24 +497,6 @@
 }
 
 @media (max-width: 480px) {
-  .logo-badge {
-    width: 40px;
-    height: 40px;
-  }
-
-  .logo-badge svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .logo-text h1 {
-    font-size: 1.1rem;
-  }
-
-  .logo-subtitle {
-    font-size: 0.7rem;
-  }
-
   .club-selector-button {
     padding: 0.35rem 0.6rem;
     font-size: 0.8rem;

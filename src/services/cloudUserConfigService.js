@@ -69,10 +69,23 @@ export const setUserClub = async (userId, clubId, userInfo = {}) => {
     primaryClubId: clubId,
     activeClubId: clubId,
     secondaryClubIds: [],
+    friends: [], // Inicializar lista de amigos vacía
     ...(userInfo.email && { email: userInfo.email }),
     ...(userInfo.displayName && { displayName: userInfo.displayName }),
     ...(userInfo.photoURL && { photoURL: userInfo.photoURL })
   };
+  
+  // Si no tiene friendId, generar uno
+  const existingConfig = await getUserConfig(userId);
+  if (!existingConfig.data || !existingConfig.data.friendId) {
+    // Importar el servicio de friends para generar el ID
+    const { generateUniqueFriendId } = await import('./friendsService');
+    const friendIdResult = await generateUniqueFriendId(userId);
+    if (friendIdResult.success) {
+      config.friendId = friendIdResult.friendId;
+    }
+  }
+  
   return await saveUserConfig(userId, config);
 };
 

@@ -9,6 +9,8 @@ import ManageRatings from './pages/ManageRatings';
 import ClubSelection from './pages/ClubSelection';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
+import FriendsPage from './pages/FriendsPage';
+import FriendRatingsPage from './pages/FriendRatingsPage';
 import { hasUserClub } from './services/cloudUserConfigService';
 import './App.css';
 
@@ -129,6 +131,8 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="manage" element={<ManageRatings />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="friends" element={<FriendsPage />} />
+              <Route path="friend/:friendId" element={<FriendRatingsPage />} />
             </Route>
           </Routes>
         </Router>

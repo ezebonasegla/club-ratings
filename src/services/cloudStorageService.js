@@ -411,3 +411,32 @@ export const getGeneralStatsFromCloud = async (userId, clubId = null, primaryClu
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Obtener todas las valoraciones de un usuario específico
+ * @param {string} userId - ID del usuario
+ */
+export const getRatingsByUserId = async (userId) => {
+  try {
+    const q = query(
+      collection(db, RATINGS_COLLECTION),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = [];
+
+    querySnapshot.forEach((doc) => {
+      ratings.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    return ratings;
+  } catch (error) {
+    console.error('Error al obtener valoraciones del usuario:', error);
+    throw error;
+  }
+};

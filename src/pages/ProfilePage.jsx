@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +6,12 @@ import { CLUBS } from '../config/clubs';
 import { 
   setUserClub, 
   addSecondaryClub, 
-  removeSecondaryClub 
+  removeSecondaryClub,
+  getUserConfig
 } from '../services/cloudUserConfigService';
 import { deleteAllUserRatings } from '../services/cloudStorageService';
-import { User, Mail, Shield, AlertTriangle, Loader, Plus, X } from 'lucide-react';
+import { updateFriendId, isFriendIdAvailable } from '../services/friendsService';
+import { User, Mail, Shield, AlertTriangle, Loader, Plus, X, Copy, Check, Edit2, Users as UsersIcon } from 'lucide-react';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -23,6 +25,92 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [removingClub, setRemovingClub] = useState(null);
   const [addingClub, setAddingClub] = useState(false);
+  
+  // Estados para Friend ID
+  const [friendId, setFriendId] = useState('');
+  const [loadingFriendId, setLoadingFriendId] = useState(true);
+  const [editingFriendId, setEditingFriendId] = useState(false);
+  const [newFriendId, setNewFriendId] = useState('');
+  const [savingFriendId, setSavingFriendId] = useState(false);
+  const [friendIdCopied, setFriendIdCopied] = useState(false);
+  const [friendIdError, setFriendIdError] = useState('');
+
+  // Cargar friendId al montar
+  useEffect(() => {
+    if (user) {
+      loadFriendId();
+    }
+  }, [user]);
+
+  const loadFriendId = async () => {
+    try {
+      setLoadingFriendId(true);
+      const result = await getUserConfig(user.uid);
+      
+      if (result.success && result.data) {
+        if (result.data.friendId) {
+          setFriendId(result.data.friendId);
+        } else {
+          // Si no tiene friendId, generar uno automáticamente
+          console.log('Generando Friend ID...');
+          const { generateUniqueFriendId } = await import('../services/friendsService');
+          const friendIdResult = await generateUniqueFriendId(user.uid);
+          console.log('Resultado de generación:', friendIdResult);
+          
+          if (friendIdResult.success) {
+            setFriendId(friendIdResult.friendId);
+          } else {
+            console.error('Error al generar Friend ID:', friendIdResult.error);
+            setFriendIdError('Error al generar ID. Intenta recargar la página.');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error en loadFriendId:', error);
+      setFriendIdError('Error al cargar ID. Intenta recargar la página.');
+    } finally {
+      setLoadingFriendId(false);
+    }
+  };
+
+  const handleCopyFriendId = () => {
+    navigator.clipboard.writeText(friendId);
+    setFriendIdCopied(true);
+    setTimeout(() => setFriendIdCopied(false), 2000);
+  };
+
+  const handleEditFriendId = () => {
+    setNewFriendId(friendId);
+    setEditingFriendId(true);
+    setFriendIdError('');
+  };
+
+  const handleSaveFriendId = async () => {
+    if (newFriendId === friendId) {
+      setEditingFriendId(false);
+      return;
+    }
+
+    setSavingFriendId(true);
+    setFriendIdError('');
+
+    const result = await updateFriendId(user.uid, newFriendId.toUpperCase());
+    
+    if (result.success) {
+      setFriendId(result.friendId);
+      setEditingFriendId(false);
+    } else {
+      setFriendIdError(result.error);
+    }
+    
+    setSavingFriendId(false);
+  };
+
+  const handleCancelEditFriendId = () => {
+    setEditingFriendId(false);
+    setNewFriendId('');
+    setFriendIdError('');
+  };
 
   const handleLogout = async () => {
     const result = await signOut();
@@ -168,6 +256,107 @@ const ProfilePage = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Friend ID */}
+          <div className="profile-section">
+            <h2>
+              <UsersIcon size={24} style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              ID de Amigo
+            </h2>
+            <p className="section-description">
+              Comparte tu ID único con amigos para que puedan agregarte y ver tus valoraciones.
+            </p>
+
+            {!editingFriendId ? (
+              <div className="friend-id-display">
+                {loadingFriendId ? (
+                  <div className="friend-id-loading">
+                    <Loader size={32} className="spinner" />
+                    <p>Generando tu ID único...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="friend-id-code">{friendId || 'Error al cargar'}</div>
+                    {friendIdError && (
+                      <div className="friend-id-error">
+                        <AlertTriangle size={16} />
+                        {friendIdError}
+                      </div>
+                    )}
+                    <div className="friend-id-actions">
+                      <button 
+                        className="btn-friend-action"
+                        onClick={handleCopyFriendId}
+                        disabled={!friendId}
+                      >
+                        {friendIdCopied ? (
+                          <>
+                            <Check size={18} />
+                            Copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={18} />
+                            Copiar
+                          </>
+                        )}
+                      </button>
+                      <button 
+                        className="btn-friend-action"
+                        onClick={handleEditFriendId}
+                        disabled={!friendId}
+                      >
+                        <Edit2 size={18} />
+                        Cambiar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="friend-id-edit">
+                <div className="friend-id-input-wrapper">
+                  <input
+                    type="text"
+                    value={newFriendId}
+                    onChange={(e) => setNewFriendId(e.target.value.toUpperCase())}
+                    maxLength={5}
+                    placeholder="5 CARACTERES"
+                    className="friend-id-input"
+                  />
+                  <span className="friend-id-hint">Solo letras mayúsculas y números</span>
+                </div>
+                
+                {friendIdError && (
+                  <div className="friend-id-error">{friendIdError}</div>
+                )}
+
+                <div className="friend-id-edit-actions">
+                  <button 
+                    className="btn-cancel-change"
+                    onClick={handleCancelEditFriendId}
+                    disabled={savingFriendId}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    className="btn-change-club"
+                    onClick={handleSaveFriendId}
+                    disabled={savingFriendId || newFriendId.length !== 5}
+                  >
+                    {savingFriendId ? (
+                      <>
+                        <Loader size={18} className="spinner" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Club Actual */}

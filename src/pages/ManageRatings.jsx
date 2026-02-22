@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getAllRatingsFromCloud, deleteRatingFromCloud, getRatingByIdFromCloud, updateRatingInCloud } from '../services/cloudStorageService';
+import { getComments } from '../services/commentsService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Trash2, Edit2, X, Save, Calendar, Trophy, Loader, Share2, Download, Copy, Check } from 'lucide-react';
+import { Trash2, Edit2, X, Save, Calendar, Trophy, Loader, Share2, Download, Copy, Check, MessageCircle, ThumbsUp, Flame, Star, Hand } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './ManageRatings.css';
 
 const ManageRatings = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const { club, clubId, primaryClubId } = useTheme();
   const [ratings, setRatings] = useState([]);
   const [editingRating, setEditingRating] = useState(null);
@@ -19,7 +22,10 @@ const ManageRatings = () => {
   const [sharingRating, setSharingRating] = useState(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [comments, setComments] = useState({});
+  const [expandedComments, setExpandedComments] = useState({});
   const shareCardRef = useRef(null);
+  const highlightedRatingRef = useRef(null);
 
   // Helper para determinar el resultado del partido
   const getMatchResult = (matchInfo) => {
@@ -49,6 +55,40 @@ const ManageRatings = () => {
     }
   }, [user, clubId]);
 
+  // Efecto para manejar navegación desde notificaciones
+  useEffect(() => {
+    if (location.state?.highlightRatingId && ratings.length > 0) {
+      const ratingId = location.state.highlightRatingId;
+      const shouldExpandComments = location.state.expandComments;
+      
+      // Expandir comentarios si se requiere
+      if (shouldExpandComments) {
+        setExpandedComments(prev => ({
+          ...prev,
+          [ratingId]: true
+        }));
+      }
+      
+      // Hacer scroll al rating después de un pequeño delay para que se renderice
+      setTimeout(() => {
+        if (highlightedRatingRef.current) {
+          highlightedRatingRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          // Agregar efecto visual temporal
+          highlightedRatingRef.current.classList.add('highlight-flash');
+          setTimeout(() => {
+            highlightedRatingRef.current?.classList.remove('highlight-flash');
+          }, 2000);
+        }
+      }, 100);
+      
+      // Limpiar el state después de usarlo
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, ratings]);
+
   const loadRatings = async () => {
     if (!user || !clubId) return;
     
@@ -56,9 +96,34 @@ const ManageRatings = () => {
     const result = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId);
     
     if (result.success) {
-      setRatings(result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+      const sortedRatings = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setRatings(sortedRatings);
+      
+      // Cargar comentarios para cada valoración
+      const commentsData = {};
+      for (const rating of sortedRatings) {
+        const ratingComments = await getComments(rating.id);
+        commentsData[rating.id] = ratingComments;
+      }
+      setComments(commentsData);
     }
     setLoading(false);
+  };
+
+  const toggleComments = (ratingId) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [ratingId]: !prev[ratingId]
+    }));
+  };
+
+  const getReactionCount = (rating, type) => {
+    return rating.reactions?.[type]?.length || 0;
+  };
+
+  const getTotalReactions = (rating) => {
+    if (!rating.reactions) return 0;
+    return Object.values(rating.reactions).reduce((total, arr) => total + (arr?.length || 0), 0);
   };
 
   const handleEdit = async (ratingId) => {
@@ -237,7 +302,11 @@ const ManageRatings = () => {
         ) : (
           <div className="ratings-list">
             {ratings.map(rating => (
-              <div key={rating.id} className="rating-card">
+              <div 
+                key={rating.id} 
+                className="rating-card"
+                ref={location.state?.highlightRatingId === rating.id ? highlightedRatingRef : null}
+              >
                 <div className="rating-header">
                   <div className="match-info-mini">
                     <h3>{rating.matchInfo.rival}</h3>
@@ -292,6 +361,60 @@ const ManageRatings = () => {
                     </span>
                   )}
                 </div>
+
+                {/* Reacciones y Comentarios */}
+                <div className="rating-interactions">
+                  <div className="reactions-summary">
+                    {getTotalReactions(rating) > 0 && (
+                      <>
+                        {getReactionCount(rating, 'like') > 0 && (
+                          <span className="reaction-count">
+                            <ThumbsUp size={14} /> {getReactionCount(rating, 'like')}
+                          </span>
+                        )}
+                        {getReactionCount(rating, 'fire') > 0 && (
+                          <span className="reaction-count">
+                            <Flame size={14} /> {getReactionCount(rating, 'fire')}
+                          </span>
+                        )}
+                        {getReactionCount(rating, 'star') > 0 && (
+                          <span className="reaction-count">
+                            <Star size={14} /> {getReactionCount(rating, 'star')}
+                          </span>
+                        )}
+                        {getReactionCount(rating, 'clap') > 0 && (
+                          <span className="reaction-count">
+                            <Hand size={14} /> {getReactionCount(rating, 'clap')}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {comments[rating.id]?.comments?.length > 0 && (
+                    <button 
+                      className="btn-toggle-comments"
+                      onClick={() => toggleComments(rating.id)}
+                    >
+                      <MessageCircle size={16} />
+                      {comments[rating.id].comments.length} comentario{comments[rating.id].comments.length !== 1 ? 's' : ''}
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista de Comentarios Expandible */}
+                {expandedComments[rating.id] && comments[rating.id]?.comments?.length > 0 && (
+                  <div className="comments-section-manage">
+                    {comments[rating.id].comments.map((comment) => (
+                      <div key={comment.id} className="comment-item-manage">
+                        <div className="comment-author-manage">
+                          {comment.userInfo?.displayName || 'Usuario'}
+                        </div>
+                        <div className="comment-text-manage">{comment.comment}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Confirm Delete Modal */}
                 {showDeleteConfirm === rating.id && (
