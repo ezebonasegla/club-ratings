@@ -116,11 +116,15 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw new Error('URL inválida de Sofascore');
     }
 
-    // Solo pedir datos del evento principal (1 crédito en lugar de 3)
+    // Pedir datos del evento y lineups (2 créditos en lugar de 3)
     const eventUrl = `https://api.sofascore.com/api/v1/event/${matchId}`;
+    const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
 
-    // Hacer solo la petición del evento
-    const eventResponse = await fetchFromSofascore(eventUrl);
+    // Hacer peticiones en paralelo
+    const [eventResponse, lineupsResponse] = await Promise.all([
+      fetchFromSofascore(eventUrl),
+      fetchFromSofascore(lineupsUrl)
+    ]);
 
     const eventData = eventResponse.data.event;
 
@@ -210,14 +214,54 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     matchInfo.rivalScore = rivalScore;
     matchInfo.rival = rival;
 
-    // Retornar solo información básica del partido (sin alineaciones detalladas)
-    // Esto ahorra 2 créditos de ScraperAPI por partido (solo 1 request en lugar de 3)
+    // Procesar lineups (alineaciones)
+    const lineupsData = lineupsResponse.data;
+    let players = [];
+
+    // Función helper para procesar jugadores
+    const processPlayers = (playerList, isStarting) => {
+      if (!playerList) return [];
+      return playerList.map(playerObj => {
+        const player = playerObj.player;
+        return {
+          id: player.id,
+          name: player.name,
+          position: player.position || playerObj.position || 'N/A',
+          shirtNumber: player.jerseyNumber || playerObj.shirtNumber || null,
+          substitute: !isStarting
+        };
+      });
+    };
+
+    // Determinar qué equipo es el del usuario y extraer sus jugadores
+    if (lineupsData) {
+      const homeLineup = lineupsData.home;
+      const awayLineup = lineupsData.away;
+
+      // Seleccionar lineup según si juega de local o visitante
+      const userLineup = isUserTeamHome ? homeLineup : awayLineup;
+
+      if (userLineup) {
+        // Procesar titulares
+        if (userLineup.players) {
+          players = players.concat(processPlayers(userLineup.players, true));
+        }
+
+        // Procesar suplentes
+        if (userLineup.substitutes) {
+          players = players.concat(processPlayers(userLineup.substitutes, false));
+        }
+      }
+    }
+
+    // Retornar información del partido con jugadores
+    // Esto usa 2 créditos de ScraperAPI por partido (event + lineups, sin incidents)
     return {
       matchInfo: {
         ...matchInfo,
         rival
       },
-      players: [] // Array vacío - las alineaciones se agregarán manualmente
+      players
     };
 
   } catch (error) {
