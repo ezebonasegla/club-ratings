@@ -65,12 +65,7 @@ const RatingPage = () => {
       setPlayerRatings(initialRatings);
       setSkipPlayers(initialSkip);
     } catch (err) {
-      console.error('Error cargando último partido:', err);
-      if (err.message === 'API_UNAVAILABLE' || err.message.includes('403') || err.message.includes('500')) {
-        setError('⚠️ Sofascore está temporalmente inaccesible. La API está bloqueando las solicitudes. Por favor, intenta más tarde o contacta al administrador.');
-      } else {
-        setError(err.message || 'Error al cargar el último partido');
-      }
+      setError(err.message || 'Error al cargar el último partido');
       setMatchData(null);
     } finally {
       setLoadingLastMatch(false);

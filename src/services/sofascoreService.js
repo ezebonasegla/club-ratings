@@ -15,12 +15,12 @@ const PROXY_URL = '/api/sofascore';
 /**
  * Función helper para hacer peticiones
  * En desarrollo: petición directa a Sofascore
- * En producción: a través del proxy con múltiples fallbacks
+ * En producción: a través del proxy con ScraperAPI
  */
 const fetchFromSofascore = async (url) => {
   if (IS_DEV) {
     // En desarrollo: petición directa sin proxy
-    console.log('🔵 DEV: Petición directa a Sofascore:', url);
+    console.log('🔵 DEV: Petición directa a Sofascore (sin ScraperAPI):', url);
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -32,20 +32,11 @@ const fetchFromSofascore = async (url) => {
     });
     return response;
   } else {
-    // En producción: a través del proxy
-    console.log('🟢 PROD: Petición a través de proxy');
+    // En producción: a través del proxy con ScraperAPI
+    console.log('🟢 PROD: Petición a través de proxy con ScraperAPI');
     const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
-    
-    try {
-      const response = await axios.get(proxyUrl, {
-        timeout: 10000 // 10 segundos timeout
-      });
-      return response;
-    } catch (error) {
-      console.error('Error con proxy:', error.message);
-      // Si el proxy falla, lanzar error con mensaje útil
-      throw new Error('API_UNAVAILABLE');
-    }
+    const response = await axios.get(proxyUrl);
+    return response;
   }
 };
 
