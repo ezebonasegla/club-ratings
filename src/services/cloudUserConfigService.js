@@ -216,5 +216,3 @@ export const removeSecondaryClub = async (userId, clubId) => {
     return { success: false, error: error.message };
   }
 };
-
-/*
