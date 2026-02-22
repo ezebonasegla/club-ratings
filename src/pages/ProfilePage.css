@@ -41,10 +41,10 @@
 
 .btn-change-photo {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 40px;
-  height: 40px;
+  bottom: -5px;
+  right: -5px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--primary-color);
   border: 3px solid #1a1a2e;
@@ -54,11 +54,13 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-change-photo:hover:not(:disabled) {
   background: var(--secondary-color);
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .btn-change-photo:disabled {
