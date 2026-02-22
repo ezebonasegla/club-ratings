@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }) => {
     // Suscribirse a cambios en el estado de autenticación
     const unsubscribe = onAuthStateChanged(auth, 
       (currentUser) => {
-        console.log('Auth state changed:', currentUser ? 'User logged in' : 'No user');
         setUser(currentUser);
         setLoading(false);
       },

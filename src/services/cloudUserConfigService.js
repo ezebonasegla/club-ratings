@@ -30,24 +30,19 @@ export const saveUserConfig = async (userId, config) => {
  */
 export const getUserConfig = async (userId) => {
   try {
-    console.log('getUserConfig - userId:', userId);
     const userDocRef = doc(db, 'users', userId);
-    console.log('getUserConfig - fetching doc...');
     
-    // Agregar timeout de 5 segundos
+    // Agregar timeout de 3 segundos
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout: Firestore no responde. Verifica las reglas de seguridad.')), 5000)
+      setTimeout(() => reject(new Error('Timeout: Firestore no responde')), 3000)
     );
     
     const docSnap = await Promise.race([
       getDoc(userDocRef),
       timeoutPromise
     ]);
-    
-    console.log('getUserConfig - doc exists:', docSnap.exists());
 
     if (docSnap.exists()) {
-      console.log('getUserConfig - data:', docSnap.data());
       return { success: true, data: docSnap.data() };
     } else {
       return { success: true, data: null };

@@ -23,21 +23,16 @@ const ProtectedRoute = ({ children, requireClub = true }) => {
   
   useEffect(() => {
     const checkUserClub = async () => {
-      console.log('ProtectedRoute - loading:', loading, 'user:', user, 'clubLoading:', clubLoading, 'club:', club);
-      
       if (!loading && !clubLoading) {
         if (user && requireClub) {
           // Primero verificar si el ThemeContext ya tiene el club cargado
           if (club) {
-            console.log('Club already loaded in ThemeContext:', club.id);
             setHasClub(true);
             setCheckingClub(false);
             return;
           }
           
-          console.log('Checking if user has club in Firestore...');
           const clubExists = await hasUserClub(user.uid);
-          console.log('User has club:', clubExists);
           setHasClub(clubExists);
         } else {
           setHasClub(false);
@@ -66,12 +61,10 @@ const ProtectedRoute = ({ children, requireClub = true }) => {
   }
   
   if (!user) {
-    console.log('No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (requireClub && hasClub === false) {
-    console.log('No club, redirecting to select-club');
     return <Navigate to="/select-club" replace />;
   }
 
@@ -104,7 +97,6 @@ const ClubSelectionRoute = () => {
 
   // Si ya tiene club, redirigir a home
   if (club) {
-    console.log('User already has club, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
