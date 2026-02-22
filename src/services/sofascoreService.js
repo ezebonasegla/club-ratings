@@ -116,17 +116,21 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw new Error('URL inválida de Sofascore');
     }
 
-    // Pedir datos del evento y lineups (2 créditos en lugar de 3)
+    // Endpoints de la API de Sofascore
     const eventUrl = `https://api.sofascore.com/api/v1/event/${matchId}`;
     const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
+    const incidentsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
 
-    // Hacer peticiones en paralelo
-    const [eventResponse, lineupsResponse] = await Promise.all([
+    // Hacer peticiones en paralelo (directas en DEV, proxy en PROD)
+    const [eventResponse, lineupsResponse, incidentsResponse] = await Promise.all([
       fetchFromSofascore(eventUrl),
-      fetchFromSofascore(lineupsUrl)
+      fetchFromSofascore(lineupsUrl),
+      fetchFromSofascore(incidentsUrl)
     ]);
 
     const eventData = eventResponse.data.event;
+    const lineupsData = lineupsResponse.data;
+    const incidentsData = incidentsResponse.data.incidents;
 
     // Procesar datos del partido
     const homeScore = eventData.homeScore?.display || 0;
@@ -214,48 +218,89 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     matchInfo.rivalScore = rivalScore;
     matchInfo.rival = rival;
 
-    // Procesar lineups (alineaciones)
-    const lineupsData = lineupsResponse.data;
-    let players = [];
+    // Procesar alineaciones del club del usuario
+    const userLineup = lineupsData[userTeam];
+    const players = [];
 
-    // Función helper para procesar jugadores
-    const processPlayers = (playerList, isStarting) => {
-      if (!playerList) return [];
-      return playerList.map(playerObj => {
-        const player = playerObj.player;
-        return {
-          id: player.id,
-          name: player.name,
-          position: player.position || playerObj.position || 'N/A',
-          shirtNumber: player.jerseyNumber || playerObj.shirtNumber || null,
-          substitute: !isStarting
+    // Sofascore incluye TODOS los jugadores en "players" (titulares + suplentes)
+    // Necesitamos diferenciarlos usando la propiedad "substitute"
+    if (userLineup.players) {
+      userLineup.players.forEach(player => {
+        const isSubstitute = player.substitute === true;
+        
+        const playerData = {
+          id: player.player.id,
+          name: player.player.name,
+          position: player.position || 'N/A',
+          shirtNumber: player.shirtNumber || '',
+          starter: !isSubstitute,
+          substitute: isSubstitute,
+          goals: 0,
+          assists: 0,
+          minutesPlayed: isSubstitute ? 0 : 90, // Suplentes empiezan con 0
+          yellowCard: false,
+          redCard: false,
+          played: !isSubstitute, // Titulares siempre jugaron, suplentes por defecto no
+          sofascoreRating: player.statistics?.rating || null // Valoración de Sofascore (1-10)
         };
+        players.push(playerData);
       });
-    };
-
-    // Determinar qué equipo es el del usuario y extraer sus jugadores
-    if (lineupsData) {
-      const homeLineup = lineupsData.home;
-      const awayLineup = lineupsData.away;
-
-      // Seleccionar lineup según si juega de local o visitante
-      const userLineup = isUserTeamHome ? homeLineup : awayLineup;
-
-      if (userLineup) {
-        // Procesar titulares
-        if (userLineup.players) {
-          players = players.concat(processPlayers(userLineup.players, true));
-        }
-
-        // Procesar suplentes
-        if (userLineup.substitutes) {
-          players = players.concat(processPlayers(userLineup.substitutes, false));
-        }
-      }
     }
 
-    // Retornar información del partido con jugadores
-    // Esto usa 2 créditos de ScraperAPI por partido (event + lineups, sin incidents)
+    // Procesar incidentes (goles, asistencias, tarjetas, sustituciones)
+    incidentsData.forEach(incident => {
+      const isUserTeamIncident = incident.isHome === isUserTeamHome;
+      if (!isUserTeamIncident) return;
+
+      const playerId = incident.player?.id;
+      const player = players.find(p => p.id === playerId);
+
+      if (player) {
+        switch (incident.incidentType) {
+          case 'goal':
+            player.goals += 1;
+            break;
+          case 'card':
+            if (incident.incidentClass === 'yellow') {
+              player.yellowCard = true;
+            } else if (incident.incidentClass === 'red') {
+              player.redCard = true;
+            }
+            break;
+        }
+      }
+
+      // Procesar asistencias
+      if (incident.incidentType === 'goal' && incident.assist1) {
+        const assistPlayer = players.find(p => p.id === incident.assist1.id);
+        if (assistPlayer) {
+          assistPlayer.assists += 1;
+        }
+      }
+
+      // Procesar sustituciones para calcular minutos jugados
+      if (incident.incidentType === 'substitution') {
+        const minute = incident.time || 0;
+        
+        // Jugador que sale
+        if (incident.playerOut) {
+          const playerOut = players.find(p => p.id === incident.playerOut.id);
+          if (playerOut) {
+            playerOut.minutesPlayed = minute;
+          }
+        }
+        
+        // Jugador que entra
+        if (incident.playerIn) {
+          const playerIn = players.find(p => p.id === incident.playerIn.id);
+          if (playerIn) {
+            playerIn.minutesPlayed = 90 - minute;
+            playerIn.played = true; // Marca que entró al partido
+          }
+        }
+      }
+    });
+
     return {
       matchInfo: {
         ...matchInfo,
