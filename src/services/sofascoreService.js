@@ -132,6 +132,11 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     const lineupsData = lineupsResponse.data;
     const incidentsData = incidentsResponse.data.incidents;
 
+    // Calcular tiempo total del partido incluyendo tiempo de adición
+    const injuryTime1 = eventData.time?.injuryTime1 || 0;
+    const injuryTime2 = eventData.time?.injuryTime2 || 0;
+    const totalMatchMinutes = 90 + injuryTime1 + injuryTime2;
+
     // Procesar datos del partido
     const homeScore = eventData.homeScore?.display || 0;
     const awayScore = eventData.awayScore?.display || 0;
@@ -237,7 +242,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
           substitute: isSubstitute,
           goals: 0,
           assists: 0,
-          minutesPlayed: isSubstitute ? 0 : 90, // Suplentes empiezan con 0
+          minutesPlayed: isSubstitute ? 0 : totalMatchMinutes, // Titulares juegan tiempo total con adición
           yellowCard: false,
           redCard: false,
           played: !isSubstitute, // Titulares siempre jugaron, suplentes por defecto no
@@ -314,7 +319,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     // Al final, calcular minutos para jugadores que siguieron en cancha
     players.forEach(player => {
       if (typeof player.lastEntryMinute === 'number') {
-        player.minutesPlayed += (90 - player.lastEntryMinute);
+        player.minutesPlayed += (totalMatchMinutes - player.lastEntryMinute);
       }
       delete player.lastEntryMinute;
     });
