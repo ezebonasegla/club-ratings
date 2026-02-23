@@ -247,8 +247,11 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       });
     }
 
+    // Ordenar incidentes por tiempo para procesar las sustituciones en orden correcto
+    const sortedIncidents = [...incidentsData].sort((a, b) => (a.time || 0) - (b.time || 0));
+    
     // Procesar incidentes (goles, asistencias, tarjetas, sustituciones)
-    incidentsData.forEach(incident => {
+    sortedIncidents.forEach(incident => {
       const isUserTeamIncident = incident.isHome === isUserTeamHome;
       if (!isUserTeamIncident) return;
 
@@ -286,7 +289,14 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
         if (incident.playerOut) {
           const playerOut = players.find(p => p.id === incident.playerOut.id);
           if (playerOut) {
-            playerOut.minutesPlayed = minute;
+            // Si tiene lastEntryMinute válido, significa que volvió a salir después de entrar
+            if (typeof playerOut.lastEntryMinute === 'number') {
+              playerOut.minutesPlayed += (minute - playerOut.lastEntryMinute);
+              delete playerOut.lastEntryMinute;
+            } else if (playerOut.starter) {
+              // Es titular saliendo por primera vez
+              playerOut.minutesPlayed = minute;
+            }
           }
         }
         
@@ -294,11 +304,19 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
         if (incident.playerIn) {
           const playerIn = players.find(p => p.id === incident.playerIn.id);
           if (playerIn) {
-            playerIn.minutesPlayed = 90 - minute;
-            playerIn.played = true; // Marca que entró al partido
+            playerIn.lastEntryMinute = minute;
+            playerIn.played = true;
           }
         }
       }
+    });
+    
+    // Al final, calcular minutos para jugadores que siguieron en cancha
+    players.forEach(player => {
+      if (typeof player.lastEntryMinute === 'number') {
+        player.minutesPlayed += (90 - player.lastEntryMinute);
+      }
+      delete player.lastEntryMinute;
     });
 
     return {
