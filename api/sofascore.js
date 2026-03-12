@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       // Opción A: Usar ScraperAPI (recomendado)
       console.log('Using ScraperAPI...');
       const scraperUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(url)}`;
-      
+
       const response = await fetch(scraperUrl, {
         headers: {
           'Accept': 'application/json',
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     } else {
       // Opción B: Fallback - intento directo con headers mejorados
       console.log('ScraperAPI not configured, trying direct access...');
-      
+
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -73,8 +73,8 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   } catch (error) {
     console.error('Proxy error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to fetch from Sofascore', 
+    return res.status(500).json({
+      error: 'Failed to fetch from Sofascore',
       message: error.message,
       hint: 'Register at https://www.scraperapi.com for free API key (1000 requests/month)'
     });

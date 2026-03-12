@@ -3,46 +3,24 @@ import axios from 'axios';
 /**
  * Servicio para extraer información de partidos desde Sofascore
  * En desarrollo: peticiones directas a Sofascore (sin proxy)
- * En producción: usa Cloudflare Worker gratuito como proxy
- *
- * Para configurar el Worker:
- *   1. Desplegá cloudflare-worker/index.js en Cloudflare Workers (gratis)
- *   2. Copiá la URL del Worker (ej: https://sofascore-proxy.TU_USUARIO.workers.dev)
- *   3. Agregá en Vercel → Settings → Environment Variables:
- *        VITE_CLOUDFLARE_WORKER_URL = https://sofascore-proxy.TU_USUARIO.workers.dev
+ * En producción: usa Vercel Serverless Function con ScraperAPI
  */
 
 // Detectar si estamos en desarrollo o producción
 const IS_DEV = import.meta.env.DEV;
 
-// URL del Cloudflare Worker - configurar en .env.local (dev) y en Vercel (prod)
-const normalizeWorkerUrl = (value) => {
-  const trimmedValue = value?.trim();
-
-  if (!trimmedValue) {
-    return '';
-  }
-
-  const urlWithProtocol = /^https?:\/\//i.test(trimmedValue)
-    ? trimmedValue
-    : `https://${trimmedValue}`;
-
-  return urlWithProtocol.replace(/\/$/, '');
-};
-
-const WORKER_URL = normalizeWorkerUrl(
-  import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://sofascore-proxy.gfv5p6smyy.workers.dev'
-);
+// Proxy URL - Solo usado en producción
+const PROXY_URL = '/api/sofascore';
 
 /**
  * Función helper para hacer peticiones
- * En desarrollo: petición directa a Sofascore (sin proxy)
- * En producción: a través del Cloudflare Worker gratuito
+ * En desarrollo: petición directa a Sofascore
+ * En producción: a través del proxy con ScraperAPI
  */
 const fetchFromSofascore = async (url) => {
   if (IS_DEV) {
     // En desarrollo: petición directa sin proxy
-    console.log('🔵 DEV: Petición directa a Sofascore:', url);
+    console.log('🔵 DEV: Petición directa a Sofascore (sin ScraperAPI):', url);
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -54,15 +32,9 @@ const fetchFromSofascore = async (url) => {
     });
     return response;
   } else {
-    // En producción: a través del Cloudflare Worker (100k requests/día gratis)
-    if (!WORKER_URL) {
-      throw new Error(
-        'Falta configurar VITE_CLOUDFLARE_WORKER_URL en las variables de entorno de Vercel. ' +
-        'Consultá cloudflare-worker/index.js para instrucciones de despliegue.'
-      );
-    }
-    console.log('🟢 PROD: Petición a través de Cloudflare Worker (gratis)');
-    const proxyUrl = `${WORKER_URL}?url=${encodeURIComponent(url)}`;
+    // En producción: a través del proxy con ScraperAPI
+    console.log('🟢 PROD: Petición a través de proxy con ScraperAPI');
+    const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
     const response = await axios.get(proxyUrl);
     return response;
   }
@@ -90,21 +62,21 @@ export const isMatchFromClub = (clubName, homeTeam, awayTeam, clubSofascoreId = 
   if (clubSofascoreId && (homeTeamId || awayTeamId)) {
     return clubSofascoreId === homeTeamId || clubSofascoreId === awayTeamId;
   }
-  
+
   const normalizedClubName = clubName.toLowerCase().trim();
   const normalizedHome = homeTeam.toLowerCase().trim();
   const normalizedAway = awayTeam.toLowerCase().trim();
-  
+
   // Primero intentar comparación exacta
   if (normalizedHome === normalizedClubName || normalizedAway === normalizedClubName) {
     return true;
   }
-  
+
   // Si no hay match exacto, verificar que el nombre del club esté presente
   // pero asegurándonos de que no es parte de otro nombre más largo
   const homeMatch = normalizedHome.includes(normalizedClubName);
   const awayMatch = normalizedAway.includes(normalizedClubName);
-  
+
   // Verificar que si hay match, no sea un falso positivo
   // (ej: "independiente" no debe matchear con "independiente rivadavia")
   if (homeMatch) {
@@ -118,7 +90,7 @@ export const isMatchFromClub = (clubName, homeTeam, awayTeam, clubSofascoreId = 
     }
     return true;
   }
-  
+
   if (awayMatch) {
     if (normalizedAway.length > normalizedClubName.length) {
       const words = normalizedAway.split(/\s+/);
@@ -127,7 +99,7 @@ export const isMatchFromClub = (clubName, homeTeam, awayTeam, clubSofascoreId = 
     }
     return true;
   }
-  
+
   return false;
 };
 
@@ -168,7 +140,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     // Procesar datos del partido
     const homeScore = eventData.homeScore?.display || 0;
     const awayScore = eventData.awayScore?.display || 0;
-    
+
     const matchInfo = {
       date: new Date(eventData.startTimestamp * 1000).toLocaleDateString('es-AR'),
       homeTeam: eventData.homeTeam.name,
@@ -185,23 +157,23 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       const homeTeamId = eventData.homeTeam.id;
       const awayTeamId = eventData.awayTeam.id;
       const clubSofascoreId = userClub.sofascoreId;
-      
+
       const isFromUserClub = isMatchFromClub(
-        userClub.shortName, 
-        eventData.homeTeam.name, 
+        userClub.shortName,
+        eventData.homeTeam.name,
         eventData.awayTeam.name,
         clubSofascoreId,
         homeTeamId,
         awayTeamId
       ) || isMatchFromClub(
-        userClub.name, 
-        eventData.homeTeam.name, 
+        userClub.name,
+        eventData.homeTeam.name,
         eventData.awayTeam.name,
         clubSofascoreId,
         homeTeamId,
         awayTeamId
       );
-      
+
       if (!isFromUserClub) {
         throw new Error(`Este partido no es de ${userClub.name}. Por favor, ingresa un partido de tu club.`);
       }
@@ -209,12 +181,12 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
 
     // Determinar si el club del usuario jugó como local o visitante
     let isUserTeamHome, userTeam, rival;
-    
+
     if (userClub) {
       const homeTeamId = eventData.homeTeam.id;
       const awayTeamId = eventData.awayTeam.id;
       const clubSofascoreId = userClub.sofascoreId;
-      
+
       // Verificar si es el equipo local usando IDs (más confiable)
       if (clubSofascoreId) {
         isUserTeamHome = homeTeamId === clubSofascoreId;
@@ -227,14 +199,14 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       // Fallback para compatibilidad con código existente (busca River)
       isUserTeamHome = eventData.homeTeam.name.includes('River');
     }
-    
+
     userTeam = isUserTeamHome ? 'home' : 'away';
     rival = isUserTeamHome ? eventData.awayTeam.name : eventData.homeTeam.name;
 
     // Determinar resultado del partido para el equipo del usuario
     const userScore = isUserTeamHome ? matchInfo.homeScore : matchInfo.awayScore;
     const rivalScore = isUserTeamHome ? matchInfo.awayScore : matchInfo.homeScore;
-    
+
     let result;
     if (userScore > rivalScore) {
       result = 'win';
@@ -243,7 +215,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     } else {
       result = 'draw';
     }
-    
+
     // Agregar información del resultado al matchInfo
     matchInfo.userTeam = userTeam;
     matchInfo.result = result;
@@ -260,7 +232,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     if (userLineup.players) {
       userLineup.players.forEach(player => {
         const isSubstitute = player.substitute === true;
-        
+
         const playerData = {
           id: player.player.id,
           name: player.player.name,
@@ -282,7 +254,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
 
     // Ordenar incidentes por tiempo para procesar las sustituciones en orden correcto
     const sortedIncidents = [...incidentsData].sort((a, b) => (a.time || 0) - (b.time || 0));
-    
+
     // Procesar incidentes (goles, asistencias, tarjetas, sustituciones)
     sortedIncidents.forEach(incident => {
       const isUserTeamIncident = incident.isHome === isUserTeamHome;
@@ -317,7 +289,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       // Procesar sustituciones para calcular minutos jugados
       if (incident.incidentType === 'substitution') {
         const minute = incident.time || 0;
-        
+
         // Jugador que sale
         if (incident.playerOut) {
           const playerOut = players.find(p => p.id === incident.playerOut.id);
@@ -332,7 +304,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
             }
           }
         }
-        
+
         // Jugador que entra
         if (incident.playerIn) {
           const playerIn = players.find(p => p.id === incident.playerIn.id);
@@ -343,7 +315,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
         }
       }
     });
-    
+
     // Al final, calcular minutos para jugadores que siguieron en cancha
     players.forEach(player => {
       if (typeof player.lastEntryMinute === 'number') {
@@ -362,12 +334,12 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
 
   } catch (error) {
     console.error('Error fetching match data:', error);
-    
+
     // Si es error de validación del club, lanzar ese mensaje específico
     if (error.message && error.message.includes('no es de')) {
       throw error;
     }
-    
+
     throw new Error('URL de partido inválida o no se pudo obtener los datos. Verifica que la URL sea correcta.');
   }
 };
@@ -382,20 +354,20 @@ export const getLastMatchUrl = async (teamId) => {
     // Obtener los últimos eventos del equipo
     const eventsUrl = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
     const response = await fetchFromSofascore(eventsUrl);
-    
+
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
-    
+
     if (response.data && response.data.events && response.data.events.length > 0) {
       // Buscar el partido terminado más reciente (mayor timestamp que ya ocurrió)
       const finishedMatches = response.data.events.filter(
         event => event.status?.type === 'finished' && event.startTimestamp < now
       );
-      
+
       // Ordenar por timestamp descendente (más reciente primero)
       finishedMatches.sort((a, b) => b.startTimestamp - a.startTimestamp);
-      
+
       const finishedMatch = finishedMatches[0];
-      
+
       if (finishedMatch) {
         // Construir la URL del partido en el formato que espera extractMatchId
         const slug = finishedMatch.slug || '';
@@ -403,7 +375,7 @@ export const getLastMatchUrl = async (teamId) => {
         return `https://www.sofascore.com/football/match/${slug}#id:${matchId}`;
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error obteniendo último partido:', error);
