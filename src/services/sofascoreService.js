@@ -3,24 +3,46 @@ import axios from 'axios';
 /**
  * Servicio para extraer información de partidos desde Sofascore
  * En desarrollo: peticiones directas a Sofascore (sin proxy)
- * En producción: usa Vercel Serverless Function con ScraperAPI
+ * En producción: usa Cloudflare Worker gratuito como proxy
+ *
+ * Para configurar el Worker:
+ *   1. Desplegá cloudflare-worker/index.js en Cloudflare Workers (gratis)
+ *   2. Copiá la URL del Worker (ej: https://sofascore-proxy.TU_USUARIO.workers.dev)
+ *   3. Agregá en Vercel → Settings → Environment Variables:
+ *        VITE_CLOUDFLARE_WORKER_URL = https://sofascore-proxy.TU_USUARIO.workers.dev
  */
 
 // Detectar si estamos en desarrollo o producción
 const IS_DEV = import.meta.env.DEV;
 
-// Proxy URL - Solo usado en producción
-const PROXY_URL = '/api/sofascore';
+// URL del Cloudflare Worker - configurar en .env.local (dev) y en Vercel (prod)
+const normalizeWorkerUrl = (value) => {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return '';
+  }
+
+  const urlWithProtocol = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+
+  return urlWithProtocol.replace(/\/$/, '');
+};
+
+const WORKER_URL = normalizeWorkerUrl(
+  import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://sofascore-proxy.gfv5p6smyy.workers.dev'
+);
 
 /**
  * Función helper para hacer peticiones
- * En desarrollo: petición directa a Sofascore
- * En producción: a través del proxy con ScraperAPI
+ * En desarrollo: petición directa a Sofascore (sin proxy)
+ * En producción: a través del Cloudflare Worker gratuito
  */
 const fetchFromSofascore = async (url) => {
   if (IS_DEV) {
     // En desarrollo: petición directa sin proxy
-    console.log('🔵 DEV: Petición directa a Sofascore (sin ScraperAPI):', url);
+    console.log('🔵 DEV: Petición directa a Sofascore:', url);
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -32,9 +54,15 @@ const fetchFromSofascore = async (url) => {
     });
     return response;
   } else {
-    // En producción: a través del proxy con ScraperAPI
-    console.log('🟢 PROD: Petición a través de proxy con ScraperAPI');
-    const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+    // En producción: a través del Cloudflare Worker (100k requests/día gratis)
+    if (!WORKER_URL) {
+      throw new Error(
+        'Falta configurar VITE_CLOUDFLARE_WORKER_URL en las variables de entorno de Vercel. ' +
+        'Consultá cloudflare-worker/index.js para instrucciones de despliegue.'
+      );
+    }
+    console.log('🟢 PROD: Petición a través de Cloudflare Worker (gratis)');
+    const proxyUrl = `${WORKER_URL}?url=${encodeURIComponent(url)}`;
     const response = await axios.get(proxyUrl);
     return response;
   }
