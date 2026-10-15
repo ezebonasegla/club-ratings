@@ -9,6 +9,7 @@ import { hasUserClub } from './services/cloudUserConfigService';
 // Los estilos de todas las páginas se cargan de entrada porque comparten clases
 // entre sí (son livianos). Lo pesado es el JS: cada página se descarga recién
 // cuando se visita (el Dashboard con gráficos, html2canvas, etc.).
+import './styles/legacy-shared.css'; // estilos genéricos (h1, modales) que usan otras páginas
 import './pages/DashboardPage.css';
 import './pages/ManageRatings.css';
 import './pages/ClubSelection.css';
