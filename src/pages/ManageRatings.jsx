@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAllRatingsFromCloud, deleteRatingFromCloud, updateRatingInCloud } from '../services/cloudStorageService';
+import { getAllRatingsFromCloud, deleteRatingFromCloud, updateRatingInCloud, hasValidRating } from '../services/cloudStorageService';
 import { getCommentsForRatings } from '../services/commentsService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -271,16 +271,16 @@ const ManageRatings = () => {
 
                 <div className="players-summary">
                   {rating.players
-                    .filter(p => p.rating !== null && p.rating !== undefined)
+                    .filter(p => hasValidRating(p.rating))
                     .slice(0, 5)
                     .map(player => (
                       <span key={player.id} className="player-chip">
                         {player.name.split(' ').slice(-1)[0]}: {player.rating}
                       </span>
                     ))}
-                  {rating.players.filter(p => p.rating !== null).length > 5 && (
+                  {rating.players.filter(p => hasValidRating(p.rating)).length > 5 && (
                     <span className="more-players">
-                      +{rating.players.filter(p => p.rating !== null).length - 5} más
+                      +{rating.players.filter(p => hasValidRating(p.rating)).length - 5} más
                     </span>
                   )}
                 </div>

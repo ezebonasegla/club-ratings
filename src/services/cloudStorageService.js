@@ -16,6 +16,12 @@ import { db } from '../config/firebase';
 // Nombre de la colección en Firestore
 const RATINGS_COLLECTION = 'ratings';
 
+/**
+ * ¿El jugador tiene una nota válida? (0 es una nota válida; null, '' y 'N/A' no)
+ */
+export const hasValidRating = (rating) =>
+  rating !== null && rating !== undefined && rating !== '' && rating !== 'N/A' && !isNaN(parseFloat(rating));
+
 // Caché en memoria de las valoraciones de cada usuario.
 // Evita releer toda la colección en cada pantalla (Dashboard la pedía 3 veces,
 // y verificar si un partido ya fue valorado también la leía completa).
@@ -276,7 +282,7 @@ export const getPlayerStatsFromCloud = async (playerId, userId) => {
 
     ratings.forEach(rating => {
       const player = rating.players.find(p => p.id === playerId);
-      if (player && player.rating && player.rating !== 'N/A') {
+      if (player && hasValidRating(player.rating)) {
         playerRatings.push({
           rating: parseFloat(player.rating),
           date: rating.matchInfo.date,
@@ -337,7 +343,7 @@ export const getAllPlayersStatsFromCloud = async (userId, clubId = null, primary
 
     ratings.forEach(rating => {
       rating.players.forEach(player => {
-        if (player.rating && player.rating !== 'N/A') {
+        if (hasValidRating(player.rating)) {
           const key = `${player.id}`;
           
           if (!playersMap.has(key)) {
@@ -422,7 +428,7 @@ export const getGeneralStatsFromCloud = async (userId, clubId = null, primaryClu
 
     ratings.forEach(rating => {
       rating.players.forEach(player => {
-        if (player.rating && player.rating !== 'N/A') {
+        if (hasValidRating(player.rating)) {
           totalRating += parseFloat(player.rating);
           totalRatingsCount += 1;
           totalGoals += player.goals || 0;

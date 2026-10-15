@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Trophy, Users, MessageCircle, ThumbsUp, Flame, Star, Hand, Send, Trash2, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserById } from '../services/friendsService';
-import { getRatingsByUserId } from '../services/cloudStorageService';
+import { getRatingsByUserId, hasValidRating } from '../services/cloudStorageService';
 import { getComments, getCommentsForRatings, addComment, deleteComment, toggleReaction } from '../services/commentsService';
 import { notifyNewComment, notifyNewReaction } from '../services/notificationsService';
 import { CLUBS } from '../config/clubs';
@@ -209,7 +209,8 @@ const FriendRatingsPage = () => {
     const players = rating.players || [];
     const ratingsArray = players
       .map(p => p.rating)
-      .filter(r => r !== null && r !== undefined && r > 0);
+      .filter(hasValidRating)
+      .map(r => parseFloat(r));
     
     if (ratingsArray.length === 0) return '0.0';
     const sum = ratingsArray.reduce((acc, r) => acc + r, 0);
@@ -385,12 +386,12 @@ const FriendRatingsPage = () => {
                     {expandedRatings[rating.id] && (
                       <div className="friend-players-list">
                         {(rating.players || [])
-                          .filter(player => player.rating !== null && player.rating !== undefined && player.rating > 0)
+                          .filter(player => hasValidRating(player.rating))
                           .map((player, index) => (
                             <div key={index} className="friend-player-item">
                               <span className="friend-player-name">{player.name}</span>
                               <span className="friend-player-rating">
-                                {player.rating.toFixed(1)}
+                                {Number(player.rating).toFixed(1)}
                               </span>
                             </div>
                           ))}
