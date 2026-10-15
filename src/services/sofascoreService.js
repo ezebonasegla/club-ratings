@@ -18,7 +18,7 @@ const PROXY_URL = '/api/sofascore';
  * En producción: a través del proxy con ScraperAPI
  */
 // Tiempo máximo por petición: ScraperAPI es lento, pero nunca debe quedar colgado
-const REQUEST_TIMEOUT_MS = 45000;
+const REQUEST_TIMEOUT_MS = 60000; // el proxy prueba varias estrategias en hasta ~55s
 
 const requestSofascore = async (url) => {
   if (IS_DEV) {
@@ -373,7 +373,8 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw new Error('SofaScore tardó demasiado en responder. Probá de nuevo en un momento.');
     }
     if (error.response?.status >= 500 || error.message?.startsWith('SofaScore devolvió')) {
-      throw new Error(`No se pudo conectar con SofaScore${error.response?.status ? ` (error ${error.response.status})` : ''}. Probá de nuevo en un momento.`);
+      const detail = error.response?.data?.message ? `: ${error.response.data.message}` : '';
+      throw new Error(`No se pudo conectar con SofaScore${error.response?.status ? ` (error ${error.response.status})` : ''}${detail}. Probá de nuevo en un momento.`);
     }
 
     throw new Error('URL de partido inválida o no se pudo obtener los datos. Verifica que la URL sea correcta.');
