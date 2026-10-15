@@ -307,6 +307,17 @@ export const getPlayerStatsFromCloud = async (playerId, userId) => {
   }
 };
 
+// Fecha del partido en ms (matchInfo.date viene como "dd/mm/aaaa"); si falta, la fecha en que se valoró
+const getMatchTime = (rating) => {
+  const parts = rating.matchInfo?.date?.split('/');
+  if (parts?.length === 3) {
+    const [day, month, year] = parts.map(Number);
+    const time = new Date(year, month - 1, day).getTime();
+    if (!isNaN(time)) return time;
+  }
+  return new Date(rating.timestamp).getTime() || 0;
+};
+
 /**
  * Obtener estadísticas de todos los jugadores
  * @param {string} userId - ID del usuario autenticado
@@ -320,7 +331,8 @@ export const getAllPlayersStatsFromCloud = async (userId, clubId = null, primary
       return { success: false, error: ratingsResult.error };
     }
 
-    const ratings = ratingsResult.data;
+    // Del partido más reciente al más antiguo
+    const ratings = ratingsResult.data.sort((a, b) => getMatchTime(b) - getMatchTime(a));
     const playersMap = new Map();
 
     ratings.forEach(rating => {
@@ -363,7 +375,7 @@ export const getAllPlayersStatsFromCloud = async (userId, clubId = null, primary
     const playersArray = Array.from(playersMap.values()).map(player => ({
       ...player,
       averageRating: player.totalRating / player.appearances,
-      lastRatings: player.lastRatings.slice(-10) // Últimos 10 partidos
+      lastRatings: player.lastRatings.slice(0, 10) // Últimos 10 partidos (más reciente primero)
     }));
 
     return { success: true, data: playersArray };

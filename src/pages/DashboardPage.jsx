@@ -71,8 +71,9 @@ const DashboardPage = () => {
   }));
 
   // Datos para gráfico de evolución del jugador seleccionado
+  // Últimos 5 partidos, en orden cronológico (izquierda = más antiguo)
   const playerEvolutionData = selectedPlayer && selectedPlayer.lastRatings
-    ? selectedPlayer.lastRatings.map((r, index) => ({
+    ? selectedPlayer.lastRatings.slice(0, 5).map(r => ({
         partido: `vs ${r.rival.split(' ').slice(0, 2).join(' ')}`,
         nota: r.rating,
         fecha: r.date
