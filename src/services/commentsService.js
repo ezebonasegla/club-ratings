@@ -37,6 +37,81 @@ export const addComment = async (ratingId, userId, comment) => {
   }
 };
 
+// Caché de perfiles de usuario (nombre/foto) para no pedir el mismo usuario N veces
+const userInfoCache = new Map(); // userId -> Promise<userInfo|null>
+
+const getUserInfo = (userId) => {
+  if (!userInfoCache.has(userId)) {
+    const promise = getDoc(doc(db, 'users', userId))
+      .then(userDoc => userDoc.exists() ? {
+        displayName: userDoc.data().displayName,
+        photoURL: userDoc.data().photoURL,
+        friendId: userDoc.data().friendId
+      } : null)
+      .catch(() => {
+        userInfoCache.delete(userId);
+        return null;
+      });
+    userInfoCache.set(userId, promise);
+  }
+  return userInfoCache.get(userId);
+};
+
+const getUsersInfo = async (userIds) => {
+  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  const infos = await Promise.all(uniqueIds.map(getUserInfo));
+  return Object.fromEntries(uniqueIds.map((id, i) => [id, infos[i]]));
+};
+
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  return new Date(value).getTime() || 0;
+};
+
+/**
+ * Obtener los comentarios de varias valoraciones de una sola vez
+ * (consultas en paralelo de hasta 30 ids cada una, en vez de una por valoración)
+ * @param {string[]} ratingIds - IDs de las valoraciones
+ * @returns {Object} { [ratingId]: { success, comments } }
+ */
+export const getCommentsForRatings = async (ratingIds) => {
+  const result = Object.fromEntries(ratingIds.map(id => [id, { success: true, comments: [] }]));
+  if (ratingIds.length === 0) return result;
+
+  try {
+    const chunks = [];
+    for (let i = 0; i < ratingIds.length; i += 30) {
+      chunks.push(ratingIds.slice(i, i + 30));
+    }
+
+    const snapshots = await Promise.all(chunks.map(chunk =>
+      getDocs(query(collection(db, 'comments'), where('ratingId', 'in', chunk)))
+    ));
+    const docs = snapshots.flatMap(snapshot => snapshot.docs);
+    const usersInfo = await getUsersInfo(docs.map(d => d.data().userId));
+
+    docs
+      .map(docSnap => {
+        const commentData = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...commentData,
+          userInfo: usersInfo[commentData.userId] || null
+        };
+      })
+      .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt))
+      .forEach(comment => {
+        result[comment.ratingId]?.comments.push(comment);
+      });
+
+    return result;
+  } catch (error) {
+    console.error('Error al obtener comentarios:', error);
+    return result;
+  }
+};
+
 /**
  * Obtener comentarios de una valoración
  * @param {string} ratingId - ID de la valoración
@@ -50,24 +125,16 @@ export const getComments = async (ratingId) => {
     );
 
     const querySnapshot = await getDocs(q);
-    const comments = [];
+    const usersInfo = await getUsersInfo(querySnapshot.docs.map(d => d.data().userId));
 
-    for (const docSnap of querySnapshot.docs) {
+    const comments = querySnapshot.docs.map(docSnap => {
       const commentData = docSnap.data();
-      
-      // Obtener info del usuario que comentó
-      const userDoc = await getDoc(doc(db, 'users', commentData.userId));
-      
-      comments.push({
+      return {
         id: docSnap.id,
         ...commentData,
-        userInfo: userDoc.exists() ? {
-          displayName: userDoc.data().displayName,
-          photoURL: userDoc.data().photoURL,
-          friendId: userDoc.data().friendId
-        } : null
-      });
-    }
+        userInfo: usersInfo[commentData.userId] || null
+      };
+    });
 
     return { success: true, comments };
   } catch (error) {

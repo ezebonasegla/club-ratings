@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, Trophy, Users, MessageCircle, ThumbsUp, Flame, Sta
 import { useAuth } from '../context/AuthContext';
 import { getUserById } from '../services/friendsService';
 import { getRatingsByUserId } from '../services/cloudStorageService';
-import { getComments, addComment, deleteComment, toggleReaction } from '../services/commentsService';
+import { getComments, getCommentsForRatings, addComment, deleteComment, toggleReaction } from '../services/commentsService';
 import { notifyNewComment, notifyNewReaction } from '../services/notificationsService';
 import { CLUBS } from '../config/clubs';
 import './FriendRatingsPage.css';
@@ -83,12 +83,8 @@ const FriendRatingsPage = () => {
       setAllRatings(sortedRatings);
       setRatings(sortedRatings); // Inicialmente mostrar todas
 
-      // Cargar comentarios para cada valoración
-      const commentsData = {};
-      for (const rating of sortedRatings) {
-        const ratingComments = await getComments(rating.id);
-        commentsData[rating.id] = ratingComments;
-      }
+      // Cargar comentarios de todas las valoraciones de una vez
+      const commentsData = await getCommentsForRatings(sortedRatings.map(r => r.id));
       setComments(commentsData);
       
     } catch (error) {

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { fetchMatchData, getLastMatchUrl, extractMatchId } from '../services/sofascoreService';
-import { saveRatingToCloud, checkMatchAlreadyRated } from '../services/cloudStorageService';
+import React, { useState, useEffect } from 'react';
+import { fetchMatchData, getLastMatchUrl, extractMatchId, prefetchLastMatches } from '../services/sofascoreService';
+import { saveRatingToCloud, checkMatchAlreadyRated, prefetchUserRatings } from '../services/cloudStorageService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader, AlertCircle, Check, Calendar, X, HelpCircle } from 'lucide-react';
+import { Loader, AlertCircle, Check, Calendar, X, HelpCircle, Share2, Plus } from 'lucide-react';
+import ShareRatingModal from '../components/ShareRatingModal';
 import './RatingPage.css';
 
 const RatingPage = () => {
@@ -16,9 +17,52 @@ const RatingPage = () => {
   const [matchData, setMatchData] = useState(null);
   const [playerRatings, setPlayerRatings] = useState({});
   const [skipPlayers, setSkipPlayers] = useState({}); // Jugadores que el usuario decide no valorar
-  const [saved, setSaved] = useState(false);
+  const [savedRating, setSavedRating] = useState(null); // Última valoración guardada (para compartir)
+  const [showShareModal, setShowShareModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showOldMatchModal, setShowOldMatchModal] = useState(false);
+
+  // Precargar en segundo plano lo que necesita "Valorar Último Partido":
+  // la lista de partidos del club y las valoraciones del usuario (para saber si ya lo valoró)
+  useEffect(() => {
+    if (club?.sofascoreId) prefetchLastMatches(club.sofascoreId);
+  }, [club?.sofascoreId]);
+
+  useEffect(() => {
+    if (user) prefetchUserRatings(user.uid);
+  }, [user]);
+
+  // Carga el partido mientras en paralelo verifica si ya fue valorado
+  const loadMatchIfNotRated = async (url) => {
+    const matchId = extractMatchId(url);
+    const matchPromise = fetchMatchData(url, club);
+    // Evitar "unhandled rejection" si se descarta por estar ya valorado
+    matchPromise.catch(() => {});
+
+    if (matchId && user) {
+      const check = await checkMatchAlreadyRated(user.uid, matchId);
+      if (check.isRated) {
+        setError('Este partido ya fue valorado. Puedes editarlo o compartirlo desde "Gestionar Valoraciones".');
+        return null;
+      }
+    }
+
+    return await matchPromise;
+  };
+
+  const initializeMatch = (data) => {
+    setMatchData(data);
+
+    // Inicializar ratings vacíos
+    const initialRatings = {};
+    const initialSkip = {};
+    data.players.forEach(player => {
+      initialRatings[player.id] = '';
+      initialSkip[player.id] = false;
+    });
+    setPlayerRatings(initialRatings);
+    setSkipPlayers(initialSkip);
+  };
 
   const handleLoadLastMatch = async () => {
     if (!club || !club.sofascoreId) {
@@ -28,42 +72,21 @@ const RatingPage = () => {
 
     setLoadingLastMatch(true);
     setError('');
-    setSaved(false);
+    setSavedRating(null);
 
     try {
       const lastMatchUrl = await getLastMatchUrl(club.sofascoreId);
       
       if (!lastMatchUrl) {
         setError('No se encontró un partido finalizado reciente para este club');
-        setLoadingLastMatch(false);
         return;
       }
 
-      // Verificar si el partido ya fue valorado ANTES de cargar datos
-      const matchId = extractMatchId(lastMatchUrl);
-      if (matchId && user) {
-        const check = await checkMatchAlreadyRated(user.uid, matchId);
-        if (check.isRated) {
-          setError('Este partido ya fue valorado. Puedes editarlo desde "Gestionar Valoraciones".');
-          setLoadingLastMatch(false);
-          return;
-        }
-      }
+      const data = await loadMatchIfNotRated(lastMatchUrl);
+      if (!data) return;
 
-      // Cargar el partido automáticamente
       setMatchUrl(lastMatchUrl);
-      const data = await fetchMatchData(lastMatchUrl, club);
-      setMatchData(data);
-      
-      // Inicializar ratings vacíos
-      const initialRatings = {};
-      const initialSkip = {};
-      data.players.forEach(player => {
-        initialRatings[player.id] = '';
-        initialSkip[player.id] = false;
-      });
-      setPlayerRatings(initialRatings);
-      setSkipPlayers(initialSkip);
+      initializeMatch(data);
     } catch (err) {
       setError(err.message || 'Error al cargar el último partido');
       setMatchData(null);
@@ -85,33 +108,14 @@ const RatingPage = () => {
 
     setLoading(true);
     setError('');
-    setSaved(false);
+    setSavedRating(null);
 
     try {
-      // Verificar si el partido ya fue valorado ANTES de cargar datos
-      const matchId = extractMatchId(matchUrl);
-      if (matchId && user) {
-        const check = await checkMatchAlreadyRated(user.uid, matchId);
-        if (check.isRated) {
-          setError('Este partido ya fue valorado. Puedes editarlo desde "Gestionar Valoraciones".');
-          setLoading(false);
-          return;
-        }
-      }
-
       // Pasar el club del usuario para validar que el partido sea de ese club
-      const data = await fetchMatchData(matchUrl, club);
-      setMatchData(data);
-      
-      // Inicializar ratings vacíos
-      const initialRatings = {};
-      const initialSkip = {};
-      data.players.forEach(player => {
-        initialRatings[player.id] = '';
-        initialSkip[player.id] = false;
-      });
-      setPlayerRatings(initialRatings);
-      setSkipPlayers(initialSkip);
+      const data = await loadMatchIfNotRated(matchUrl);
+      if (!data) return;
+
+      initializeMatch(data);
       setShowOldMatchModal(false); // Cerrar modal al cargar
     } catch (err) {
       setError(err.message || 'Error al obtener datos del partido');
@@ -163,6 +167,7 @@ const RatingPage = () => {
         ...matchData.matchInfo,
         matchUrl: matchUrl // Guardar la URL para futuras verificaciones
       },
+      matchId: extractMatchId(matchUrl), // Permite verificar rápido si ya fue valorado
       players: matchData.players.map(player => ({
         ...player,
         rating: skipPlayers[player.id] 
@@ -178,17 +183,15 @@ const RatingPage = () => {
       const result = await saveRatingToCloud(ratingData, user.uid, clubId);
       
       if (result.success) {
-        setSaved(true);
         setError('');
-        
-        // Limpiar formulario después de 2 segundos
-        setTimeout(() => {
-          setMatchData(null);
-          setMatchUrl('');
-          setPlayerRatings({});
-          setSkipPlayers({});
-          setSaved(false);
-        }, 2000);
+        setSavedRating({ id: result.id, ...ratingData, clubId });
+
+        // Limpiar formulario: queda la tarjeta de éxito con el botón de compartir
+        setMatchData(null);
+        setMatchUrl('');
+        setPlayerRatings({});
+        setSkipPlayers({});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError(result.error || 'Error al guardar las valoraciones');
       }
@@ -255,11 +258,40 @@ const RatingPage = () => {
           </div>
         )}
         
-        {saved && (
-          <div className="success-message">
-            <Check size={16} />
-            <span>¡Valoraciones guardadas exitosamente!</span>
+        {savedRating && (
+          <div className="saved-rating-card">
+            <div className="saved-rating-header">
+              <Check size={20} />
+              <span>¡Valoraciones guardadas exitosamente!</span>
+            </div>
+            <p className="saved-rating-match">
+              {club?.shortName || club?.name} vs {savedRating.matchInfo.rival} · {savedRating.matchInfo.score}
+            </p>
+            <div className="saved-rating-actions">
+              <button
+                className="saved-rating-share"
+                onClick={() => setShowShareModal(true)}
+              >
+                <Share2 size={18} />
+                Compartir
+              </button>
+              <button
+                className="saved-rating-dismiss"
+                onClick={() => setSavedRating(null)}
+              >
+                <Plus size={18} />
+                Valorar otro
+              </button>
+            </div>
           </div>
+        )}
+
+        {showShareModal && savedRating && (
+          <ShareRatingModal
+            rating={savedRating}
+            club={club}
+            onClose={() => setShowShareModal(false)}
+          />
         )}
 
         {/* Modal para partido antiguo */}

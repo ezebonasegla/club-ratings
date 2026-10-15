@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAllRatingsFromCloud, deleteRatingFromCloud, getRatingByIdFromCloud, updateRatingInCloud } from '../services/cloudStorageService';
-import { getComments } from '../services/commentsService';
+import { getAllRatingsFromCloud, deleteRatingFromCloud, updateRatingInCloud } from '../services/cloudStorageService';
+import { getCommentsForRatings } from '../services/commentsService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Trash2, Edit2, X, Save, Calendar, Trophy, Loader, Share2, Download, Copy, Check, MessageCircle, ThumbsUp, Flame, Star, Hand } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { Trash2, Edit2, X, Save, Calendar, Loader, Share2, MessageCircle, ThumbsUp, Flame, Star, Hand } from 'lucide-react';
+import ShareRatingModal from '../components/ShareRatingModal';
 import './ManageRatings.css';
 
 const ManageRatings = () => {
@@ -20,11 +20,8 @@ const ManageRatings = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sharingRating, setSharingRating] = useState(null);
-  const [generatingImage, setGeneratingImage] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [comments, setComments] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
-  const shareCardRef = useRef(null);
   const highlightedRatingRef = useRef(null);
 
   // Helper para determinar el resultado del partido
@@ -93,21 +90,20 @@ const ManageRatings = () => {
     if (!user || !clubId) return;
     
     setLoading(true);
-    const result = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId);
+    const result = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId, { force: true });
     
     if (result.success) {
       const sortedRatings = result.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setRatings(sortedRatings);
-      
-      // Cargar comentarios para cada valoración
-      const commentsData = {};
-      for (const rating of sortedRatings) {
-        const ratingComments = await getComments(rating.id);
-        commentsData[rating.id] = ratingComments;
-      }
+      setLoading(false);
+
+      // Los comentarios se cargan en segundo plano, todos juntos,
+      // sin bloquear la lista de partidos
+      const commentsData = await getCommentsForRatings(sortedRatings.map(r => r.id));
       setComments(commentsData);
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const toggleComments = (ratingId) => {
@@ -126,21 +122,17 @@ const ManageRatings = () => {
     return Object.values(rating.reactions).reduce((total, arr) => total + (arr?.length || 0), 0);
   };
 
-  const handleEdit = async (ratingId) => {
-    const result = await getRatingByIdFromCloud(ratingId, user.uid);
-    
-    if (result.success) {
-      setEditingRating(result.data);
-      
-      // Inicializar ratings de jugadores
-      const ratings = {};
-      result.data.players.forEach(player => {
-        if (player.rating !== null && player.rating !== undefined && player.rating !== 'N/A') {
-          ratings[player.id] = player.rating;
-        }
-      });
-      setPlayerRatings(ratings);
-    }
+  const handleEdit = (rating) => {
+    setEditingRating(rating);
+
+    // Inicializar ratings de jugadores
+    const initialRatings = {};
+    rating.players.forEach(player => {
+      if (player.rating !== null && player.rating !== undefined && player.rating !== 'N/A') {
+        initialRatings[player.id] = player.rating;
+      }
+    });
+    setPlayerRatings(initialRatings);
   };
 
   const handleDelete = async (ratingId) => {
@@ -149,7 +141,7 @@ const ManageRatings = () => {
       const result = await deleteRatingFromCloud(ratingId, user.uid);
       
       if (result.success) {
-        loadRatings();
+        setRatings(prev => prev.filter(r => r.id !== ratingId));
         setShowDeleteConfirm(null);
       } else {
         alert('Error al eliminar la valoración');
@@ -182,15 +174,16 @@ const ManageRatings = () => {
         : null
     }));
 
+    const { id: ratingId, ...ratingFields } = editingRating;
     const updatedRating = {
-      ...editingRating,
+      ...ratingFields,
       players: updatedPlayers
     };
 
-    const result = await updateRatingInCloud(editingRating.id, updatedRating, user.uid);
+    const result = await updateRatingInCloud(ratingId, updatedRating, user.uid);
     
     if (result.success) {
-      loadRatings();
+      setRatings(prev => prev.map(r => r.id === ratingId ? { ...r, players: updatedPlayers } : r));
       setEditingRating(null);
       setPlayerRatings({});
     } else {
@@ -203,76 +196,6 @@ const ManageRatings = () => {
   const handleCancelEdit = () => {
     setEditingRating(null);
     setPlayerRatings({});
-  };
-
-  const handleShare = (rating) => {
-    setSharingRating(rating);
-    setCopied(false);
-  };
-
-  const handleShareAsText = () => {
-    if (!sharingRating) return;
-
-    const ratedPlayers = sharingRating.players.filter(p => 
-      p.rating !== null && 
-      p.rating !== undefined && 
-      !isNaN(p.rating) && 
-      p.rating !== 'N/A'
-    );
-    const avgRating = ratedPlayers.length > 0
-      ? (ratedPlayers.reduce((sum, p) => sum + p.rating, 0) / ratedPlayers.length).toFixed(1)
-      : 'N/A';
-
-    let text = `⚽ ${club?.name || 'Mi Equipo'} - Valoraciones\n`;
-    text += `🆚 ${sharingRating.matchInfo.rival}\n`;
-    text += `📊 ${sharingRating.matchInfo.score} | ${sharingRating.matchInfo.competition}\n`;
-    text += `📅 ${sharingRating.matchInfo.date}\n\n`;
-    text += `📈 Promedio del equipo: ${avgRating}\n\n`;
-    text += `👥 Valoraciones:\n`;
-    
-    ratedPlayers
-      .sort((a, b) => b.rating - a.rating)
-      .forEach((player, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐';
-        text += `${medal} ${player.name}: ${player.rating}/10`;
-        if (player.goals > 0) text += ` ⚽${player.goals}`;
-        if (player.assists > 0) text += ` 🅰️${player.assists}`;
-        text += `\n`;
-      });
-
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const handleShareAsImage = async () => {
-    if (!shareCardRef.current) return;
-
-    setGeneratingImage(true);
-
-    try {
-      const canvas = await html2canvas(shareCardRef.current, {
-        backgroundColor: '#1a1a2e',
-        scale: 2,
-        logging: false,
-        useCORS: true
-      });
-
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `valoracion-${sharingRating.matchInfo.rival.replace(/\s+/g, '-')}-${sharingRating.matchInfo.date}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-        setGeneratingImage(false);
-      });
-    } catch (error) {
-      console.error('Error generating image:', error);
-      alert('Error al generar la imagen');
-      setGeneratingImage(false);
-    }
   };
 
   if (loading) {
@@ -321,7 +244,7 @@ const ManageRatings = () => {
                   <div className="rating-actions">
                     <button
                       className="btn-share"
-                      onClick={() => handleShare(rating)}
+                      onClick={() => setSharingRating(rating)}
                       title="Compartir valoración"
                     >
                       <Share2 size={18} />
@@ -329,7 +252,7 @@ const ManageRatings = () => {
                     </button>
                     <button
                       className="btn-edit"
-                      onClick={() => handleEdit(rating.id)}
+                      onClick={() => handleEdit(rating)}
                       title="Editar valoraciones"
                     >
                       <Edit2 size={18} />
@@ -573,132 +496,11 @@ const ManageRatings = () => {
 
         {/* Share Modal */}
         {sharingRating && (
-          <div className="share-modal-overlay" onClick={() => setSharingRating(null)}>
-            <div className="share-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Compartir Valoración</h2>
-                <button className="btn-close" onClick={() => setSharingRating(null)}>
-                  <X size={24} />
-                </button>
-              </div>
-
-              {/* Preview Card */}
-              <div className="share-preview" ref={shareCardRef}>
-                <div className="share-card">
-                  <div className="share-card-header"
-                    style={{
-                      background: `linear-gradient(135deg, ${club?.colors.primary} 0%, ${club?.colors.secondary} 100%)`,
-                      color: club?.colors.text
-                    }}
-                  >
-                    <h3>{club?.name || 'Mi Equipo'}</h3>
-                    <p className="share-subtitle">Valoraciones</p>
-                  </div>
-                  
-                  <div className="share-card-body">
-                    <div className="share-match-info">
-                      <div className="share-rival">{sharingRating.matchInfo.rival}</div>
-                      <div className="share-score">{sharingRating.matchInfo.score}</div>
-                      <div className="share-details">
-                        <span>{sharingRating.matchInfo.date}</span>
-                        <span>{sharingRating.matchInfo.competition}</span>
-                      </div>
-                    </div>
-
-                    <div className="share-stats">
-                      <div className="share-stat">
-                        <span className="stat-label">Promedio</span>
-                        <span className="stat-value">
-                          {(() => {
-                            const validPlayers = sharingRating.players.filter(p => 
-                              p.rating !== null && 
-                              p.rating !== undefined && 
-                              !isNaN(p.rating) && 
-                              p.rating !== 'N/A'
-                            );
-                            return validPlayers.length > 0
-                              ? (validPlayers.reduce((sum, p) => sum + p.rating, 0) / validPlayers.length).toFixed(1)
-                              : 'N/A';
-                          })()}
-                        </span>
-                      </div>
-                      <div className="share-stat">
-                        <span className="stat-label">Jugadores</span>
-                        <span className="stat-value">
-                          {sharingRating.players.filter(p => 
-                            p.rating !== null && 
-                            p.rating !== undefined && 
-                            !isNaN(p.rating) && 
-                            p.rating !== 'N/A'
-                          ).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="share-top-players">
-                      <h4>Valoraciones</h4>
-                      {sharingRating.players
-                        .filter(p => 
-                          p.rating !== null && 
-                          p.rating !== undefined && 
-                          !isNaN(p.rating) && 
-                          p.rating !== 'N/A'
-                        )
-                        .sort((a, b) => b.rating - a.rating)
-                        .map((player, index) => (
-                          <div key={player.id} className="share-player-row">
-                            <span className="player-rank">{index + 1}</span>
-                            <span className="player-name-share">{player.name}</span>
-                            <span className="player-rating-share">{player.rating}</span>
-                          </div>
-                        ))}
-                    </div>
-
-                    <div className="share-footer">
-                      <span>Club Ratings App</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="share-actions">
-                <button 
-                  className="btn-share-option"
-                  onClick={handleShareAsText}
-                  disabled={generatingImage}
-                >
-                  {copied ? (
-                    <>
-                      <Check size={20} />
-                      Copiado!
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={20} />
-                      Copiar como Texto
-                    </>
-                  )}
-                </button>
-                <button 
-                  className="btn-share-option"
-                  onClick={handleShareAsImage}
-                  disabled={generatingImage}
-                >
-                  {generatingImage ? (
-                    <>
-                      <Loader size={20} className="spinner" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={20} />
-                      Descargar Imagen
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
+          <ShareRatingModal
+            rating={sharingRating}
+            club={club}
+            onClose={() => setSharingRating(null)}
+          />
         )}
       </div>
     </div>

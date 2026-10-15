@@ -1,18 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import RatingPage from './pages/RatingPage';
-import DashboardPage from './pages/DashboardPage';
-import ManageRatings from './pages/ManageRatings';
-import ClubSelection from './pages/ClubSelection';
-import LoginPage from './pages/LoginPage';
-import ProfilePage from './pages/ProfilePage';
-import FriendsPage from './pages/FriendsPage';
-import FriendRatingsPage from './pages/FriendRatingsPage';
 import { hasUserClub } from './services/cloudUserConfigService';
+
+// Los estilos de todas las páginas se cargan de entrada porque comparten clases
+// entre sí (son livianos). Lo pesado es el JS: cada página se descarga recién
+// cuando se visita (el Dashboard con gráficos, html2canvas, etc.).
+import './pages/DashboardPage.css';
+import './pages/ManageRatings.css';
+import './pages/ClubSelection.css';
+import './pages/LoginPage.css';
+import './pages/ProfilePage.css';
+import './pages/FriendsPage.css';
+import './pages/FriendRatingsPage.css';
 import './App.css';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ManageRatings = lazy(() => import('./pages/ManageRatings'));
+const ClubSelection = lazy(() => import('./pages/ClubSelection'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const FriendsPage = lazy(() => import('./pages/FriendsPage'));
+const FriendRatingsPage = lazy(() => import('./pages/FriendRatingsPage'));
+
+const FullPageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh',
+    fontSize: '1.5rem'
+  }}>
+    Cargando...
+  </div>
+);
+
+const PageLoader = () => (
+  <div style={{ textAlign: 'center', padding: '3rem', fontSize: '1.2rem' }}>
+    Cargando...
+  </div>
+);
 
 // Componente para proteger rutas que requieren autenticación
 const ProtectedRoute = ({ children, requireClub = true }) => {
@@ -44,20 +74,8 @@ const ProtectedRoute = ({ children, requireClub = true }) => {
     checkUserClub();
   }, [user, loading, requireClub, club, clubLoading]);
 
-  console.log('ProtectedRoute render - loading:', loading, 'checkingClub:', checkingClub, 'user:', !!user, 'hasClub:', hasClub);
-
   if (loading || checkingClub) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.5rem'
-      }}>
-        Cargando...
-      </div>
-    );
+    return <FullPageLoader />;
   }
   
   if (!user) {
@@ -78,17 +96,7 @@ const ClubSelectionRoute = () => {
   const { club, loading: clubLoading } = useTheme();
 
   if (loading || clubLoading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.5rem'
-      }}>
-        Cargando...
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!user) {
@@ -108,6 +116,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
+          <Suspense fallback={<FullPageLoader />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/select-club" element={<ClubSelectionRoute />} />
@@ -120,13 +129,14 @@ function App() {
               }
             >
               <Route index element={<RatingPage />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="manage" element={<ManageRatings />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="friends" element={<FriendsPage />} />
-              <Route path="friend/:friendId" element={<FriendRatingsPage />} />
+              <Route path="dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+              <Route path="manage" element={<Suspense fallback={<PageLoader />}><ManageRatings /></Suspense>} />
+              <Route path="profile" element={<Suspense fallback={<PageLoader />}><ProfilePage /></Suspense>} />
+              <Route path="friends" element={<Suspense fallback={<PageLoader />}><FriendsPage /></Suspense>} />
+              <Route path="friend/:friendId" element={<Suspense fallback={<PageLoader />}><FriendRatingsPage /></Suspense>} />
             </Route>
           </Routes>
+          </Suspense>
         </Router>
       </ThemeProvider>
     </AuthProvider>

@@ -27,3 +27,13 @@ a {
   color: inherit;
 }
 
+
+/* Spinner global (usado en varias páginas y en el header) */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

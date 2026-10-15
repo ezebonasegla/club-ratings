@@ -16,6 +16,45 @@ import { db } from '../config/firebase';
 // Nombre de la colección en Firestore
 const RATINGS_COLLECTION = 'ratings';
 
+// Caché en memoria de las valoraciones de cada usuario.
+// Evita releer toda la colección en cada pantalla (Dashboard la pedía 3 veces,
+// y verificar si un partido ya fue valorado también la leía completa).
+const RATINGS_CACHE_TTL = 2 * 60 * 1000;
+const ratingsCache = new Map(); // userId -> { promise, time }
+
+const fetchUserRatings = (userId, force = false) => {
+  const cached = ratingsCache.get(userId);
+  if (!force && cached && Date.now() - cached.time < RATINGS_CACHE_TTL) {
+    return cached.promise;
+  }
+
+  const q = query(
+    collection(db, RATINGS_COLLECTION),
+    where('userId', '==', userId),
+    orderBy('timestamp', 'desc')
+  );
+  const promise = getDocs(q).then(snapshot =>
+    snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+  );
+  ratingsCache.set(userId, { promise, time: Date.now() });
+  // No cachear errores
+  promise.catch(() => ratingsCache.delete(userId));
+  return promise;
+};
+
+export const invalidateRatingsCache = (userId) => {
+  if (userId) ratingsCache.delete(userId);
+  else ratingsCache.clear();
+};
+
+/**
+ * Precargar las valoraciones del usuario (no bloqueante)
+ */
+export const prefetchUserRatings = (userId) => {
+  if (!userId) return;
+  fetchUserRatings(userId).catch(() => {});
+};
+
 /**
  * Guardar una valoración en Firestore
  * @param {Object} rating - Objeto con la valoración del partido
@@ -33,6 +72,7 @@ export const saveRatingToCloud = async (rating, userId, clubId = null) => {
     };
 
     const docRef = await addDoc(collection(db, RATINGS_COLLECTION), ratingWithUser);
+    invalidateRatingsCache(userId);
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error('Error al guardar en Firestore:', error);
@@ -45,25 +85,12 @@ export const saveRatingToCloud = async (rating, userId, clubId = null) => {
  * @param {string} userId - ID del usuario autenticado
  * @param {string} clubId - (Opcional) ID del club para filtrar
  * @param {string} primaryClubId - (Opcional) ID del club principal para compatibilidad con datos antiguos
+ * @param {Object} options - { force: true } para ignorar la caché
  */
-export const getAllRatingsFromCloud = async (userId, clubId = null, primaryClubId = null) => {
+export const getAllRatingsFromCloud = async (userId, clubId = null, primaryClubId = null, options = {}) => {
   try {
-    // Siempre traer todas las valoraciones del usuario
-    const q = query(
-      collection(db, RATINGS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-    let ratings = [];
-    
-    querySnapshot.forEach((doc) => {
-      ratings.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
+    // Copia para que quien llame pueda ordenar sin alterar la caché
+    let ratings = [...await fetchUserRatings(userId, options.force)];
 
     // Si se especifica clubId, filtrar en cliente
     if (clubId) {
@@ -103,6 +130,7 @@ export const checkMatchAlreadyRated = async (userId, matchId) => {
       // Buscar si existe una valoración con este matchInfo que contenga el matchId
       const existingRating = ratingsResult.data.find(rating => {
         // El matchId puede estar en diferentes formatos en la URL guardada
+        if (rating.matchId && String(rating.matchId) === String(matchId)) return true;
         const savedMatchUrl = rating.matchInfo?.matchUrl || '';
         return savedMatchUrl.includes(`id:${matchId}`) || savedMatchUrl.includes(`id-${matchId}`);
       });
@@ -167,6 +195,7 @@ export const updateRatingInCloud = async (ratingId, updatedData, userId) => {
       ...updatedData,
       updatedAt: serverTimestamp()
     });
+    invalidateRatingsCache(userId);
 
     return { success: true };
   } catch (error) {
@@ -191,6 +220,7 @@ export const deleteRatingFromCloud = async (ratingId, userId) => {
     }
 
     await deleteDoc(docRef);
+    invalidateRatingsCache(userId);
     return { success: true };
   } catch (error) {
     console.error('Error al eliminar valoración:', error);
@@ -204,7 +234,7 @@ export const deleteRatingFromCloud = async (ratingId, userId) => {
  */
 export const deleteAllUserRatings = async (userId) => {
   try {
-    const ratingsResult = await getAllRatingsFromCloud(userId);
+    const ratingsResult = await getAllRatingsFromCloud(userId, null, null, { force: true });
     if (!ratingsResult.success) {
       return { success: false, error: ratingsResult.error };
     }
@@ -215,6 +245,7 @@ export const deleteAllUserRatings = async (userId) => {
     );
 
     await Promise.all(deletePromises);
+    invalidateRatingsCache(userId);
     return { success: true, deletedCount: ratings.length };
   } catch (error) {
     console.error('Error al eliminar todas las valoraciones:', error);

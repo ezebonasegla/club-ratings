@@ -5,6 +5,32 @@ import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext();
 
+// Copia local de la configuración de clubes del usuario: permite mostrar la app
+// al instante al abrirla, mientras se actualiza desde Firestore en segundo plano.
+const clubsCacheKey = (userId) => `clubRatings:clubs:${userId}`;
+
+const readCachedClubs = (userId) => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(clubsCacheKey(userId)));
+    return cached?.activeClubId && getClubById(cached.activeClubId) ? cached : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedClubs = (userId, clubsData) => {
+  try {
+    if (clubsData) {
+      const { primaryClubId, secondaryClubIds, activeClubId, allClubIds } = clubsData;
+      localStorage.setItem(clubsCacheKey(userId), JSON.stringify({ primaryClubId, secondaryClubIds, activeClubId, allClubIds }));
+    } else {
+      localStorage.removeItem(clubsCacheKey(userId));
+    }
+  } catch {
+    // localStorage no disponible: no pasa nada, sólo se pierde la caché
+  }
+};
+
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
@@ -24,7 +50,32 @@ export const ThemeProvider = ({ children }) => {
   const [secondaryClubIds, setSecondaryClubIds] = useState([]);
   const [allClubs, setAllClubs] = useState([]);
 
+  const applyClubsData = (clubsData) => {
+    setPrimaryClubId(clubsData.primaryClubId);
+    setSecondaryClubIds(clubsData.secondaryClubIds);
+
+    // Cargar todos los objetos de clubes
+    const clubObjects = clubsData.allClubIds.map(id => getClubById(id)).filter(Boolean);
+    setAllClubs(clubObjects);
+
+    // Configurar club activo
+    setClubId(clubsData.activeClubId);
+    const clubData = getClubById(clubsData.activeClubId);
+    setClub(clubData);
+    applyTheme(clubData);
+  };
+
+  const clearClubsData = () => {
+    setClubId(null);
+    setClub(null);
+    setPrimaryClubId(null);
+    setSecondaryClubIds([]);
+    setAllClubs([]);
+  };
+
   useEffect(() => {
+    let cancelled = false;
+
     const loadUserClub = async () => {
       // Si auth está cargando, esperar
       if (authLoading) {
@@ -32,37 +83,36 @@ export const ThemeProvider = ({ children }) => {
       }
 
       if (user) {
-        setLoading(true);
+        // Mostrar enseguida la última configuración conocida
+        const cached = readCachedClubs(user.uid);
+        if (cached) {
+          applyClubsData(cached);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+
         const result = await getUserClubs(user.uid);
-        
+        if (cancelled) return;
+
         if (result.success && result.activeClubId) {
-          // Guardar datos de clubes
-          setPrimaryClubId(result.primaryClubId);
-          setSecondaryClubIds(result.secondaryClubIds);
-          
-          // Cargar todos los objetos de clubes
-          const clubObjects = result.allClubIds.map(id => getClubById(id)).filter(Boolean);
-          setAllClubs(clubObjects);
-          
-          // Configurar club activo
-          setClubId(result.activeClubId);
-          const clubData = getClubById(result.activeClubId);
-          setClub(clubData);
-          applyTheme(clubData);
+          applyClubsData(result);
+          writeCachedClubs(user.uid, result);
+        } else if (result.success) {
+          // El usuario todavía no eligió club
+          clearClubsData();
+          writeCachedClubs(user.uid, null);
         }
         setLoading(false);
       } else {
         // Si no hay usuario, no hay club que cargar
-        setClubId(null);
-        setClub(null);
-        setPrimaryClubId(null);
-        setSecondaryClubIds([]);
-        setAllClubs([]);
+        clearClubsData();
         setLoading(false);
       }
     };
 
     loadUserClub();
+    return () => { cancelled = true; };
   }, [user, authLoading]);
 
   const applyTheme = (clubData) => {
@@ -78,6 +128,8 @@ export const ThemeProvider = ({ children }) => {
   const changeClub = (newClubId) => {
     const clubData = getClubById(newClubId);
     if (clubData) {
+      // La configuración cambió por fuera de este contexto: invalidar la copia local
+      if (user) writeCachedClubs(user.uid, null);
       setClubId(newClubId);
       setClub(clubData);
       applyTheme(clubData);
@@ -92,6 +144,8 @@ export const ThemeProvider = ({ children }) => {
     if (result.success) {
       const clubData = getClubById(newClubId);
       if (clubData) {
+        const cached = readCachedClubs(user.uid);
+        if (cached) writeCachedClubs(user.uid, { ...cached, activeClubId: newClubId });
         setClubId(newClubId);
         setClub(clubData);
         applyTheme(clubData);
@@ -108,16 +162,8 @@ export const ThemeProvider = ({ children }) => {
     const result = await getUserClubs(user.uid);
     
     if (result.success && result.activeClubId) {
-      setPrimaryClubId(result.primaryClubId);
-      setSecondaryClubIds(result.secondaryClubIds);
-      
-      const clubObjects = result.allClubIds.map(id => getClubById(id)).filter(Boolean);
-      setAllClubs(clubObjects);
-      
-      setClubId(result.activeClubId);
-      const clubData = getClubById(result.activeClubId);
-      setClub(clubData);
-      applyTheme(clubData);
+      applyClubsData(result);
+      writeCachedClubs(user.uid, result);
     }
     setLoading(false);
   };

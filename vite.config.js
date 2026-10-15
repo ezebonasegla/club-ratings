@@ -51,6 +51,18 @@ const apiPlugin = () => ({
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), apiPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Separar librerías grandes en archivos propios: el navegador las guarda
+        // en caché y no se vuelven a descargar en cada deploy de la app
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        },
+      },
+    },
+  },
 })
 
 

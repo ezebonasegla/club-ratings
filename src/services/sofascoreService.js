@@ -17,10 +17,9 @@ const PROXY_URL = '/api/sofascore';
  * En desarrollo: petición directa a Sofascore
  * En producción: a través del proxy con ScraperAPI
  */
-const fetchFromSofascore = async (url) => {
+const requestSofascore = async (url) => {
   if (IS_DEV) {
     // En desarrollo: petición directa sin proxy
-    console.log('🔵 DEV: Petición directa a Sofascore (sin ScraperAPI):', url);
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -33,11 +32,26 @@ const fetchFromSofascore = async (url) => {
     return response;
   } else {
     // En producción: a través del proxy con ScraperAPI
-    console.log('🟢 PROD: Petición a través de proxy con ScraperAPI');
     const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
     const response = await axios.get(proxyUrl);
     return response;
   }
+};
+
+// Caché en memoria de respuestas (el proxy es lento: cada petición tarda segundos).
+// Las peticiones en curso se comparten, así una precarga no se duplica.
+const responseCache = new Map(); // url -> { promise, expires }
+
+const fetchFromSofascore = (url, ttlMs = 10 * 60 * 1000) => {
+  const cached = responseCache.get(url);
+  if (cached && cached.expires > Date.now()) {
+    return cached.promise;
+  }
+
+  const promise = requestSofascore(url);
+  responseCache.set(url, { promise, expires: Date.now() + ttlMs });
+  promise.catch(() => responseCache.delete(url));
+  return promise;
 };
 
 /**
@@ -47,6 +61,12 @@ export const extractMatchId = (url) => {
   const match = url.match(/id[:\-](\d+)/);
   return match ? match[1] : null;
 };
+
+const matchEndpoints = (matchId) => [
+  `https://api.sofascore.com/api/v1/event/${matchId}`,
+  `https://api.sofascore.com/api/v1/event/${matchId}/lineups`,
+  `https://api.sofascore.com/api/v1/event/${matchId}/incidents`
+];
 
 /**
  * Verifica si el partido pertenece al club seleccionado
@@ -117,9 +137,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     }
 
     // Endpoints de la API de Sofascore
-    const eventUrl = `https://api.sofascore.com/api/v1/event/${matchId}`;
-    const lineupsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/lineups`;
-    const incidentsUrl = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
+    const [eventUrl, lineupsUrl, incidentsUrl] = matchEndpoints(matchId);
 
     // Hacer peticiones en paralelo (directas en DEV, proxy en PROD)
     const [eventResponse, lineupsResponse, incidentsResponse] = await Promise.all([
@@ -344,6 +362,27 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
   }
 };
 
+const lastEventsUrl = (teamId) => `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
+const LAST_EVENTS_TTL = 5 * 60 * 1000;
+
+/**
+ * Precarga la lista de últimos partidos del club (no bloqueante),
+ * para que "Valorar Último Partido" responda más rápido.
+ */
+export const prefetchLastMatches = (teamId) => {
+  if (!teamId) return;
+  fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL).catch(() => {});
+};
+
+/**
+ * Precarga los datos de un partido (evento, alineaciones, incidencias)
+ */
+export const prefetchMatchData = (matchUrl) => {
+  const matchId = extractMatchId(matchUrl || '');
+  if (!matchId) return;
+  matchEndpoints(matchId).forEach(url => fetchFromSofascore(url).catch(() => {}));
+};
+
 /**
  * Obtiene el último partido del club desde su página de equipo
  * @param {number} teamId - ID del equipo en Sofascore
@@ -352,8 +391,7 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
 export const getLastMatchUrl = async (teamId) => {
   try {
     // Obtener los últimos eventos del equipo
-    const eventsUrl = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/0`;
-    const response = await fetchFromSofascore(eventsUrl);
+    const response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL);
 
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
 

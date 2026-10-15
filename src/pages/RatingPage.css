@@ -776,3 +776,67 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Tarjeta de valoración guardada (con botón de compartir) */
+.saved-rating-card {
+  background: #efe;
+  border: 1px solid #cfc;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  color: #060;
+}
+
+.saved-rating-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.saved-rating-match {
+  margin: 0.5rem 0 1rem;
+  color: #2e5e2e;
+}
+
+.saved-rating-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.saved-rating-actions button {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saved-rating-share {
+  background: var(--primary-color);
+  color: var(--text-color, #fff);
+  border: none;
+}
+
+.saved-rating-share:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.saved-rating-dismiss {
+  background: white;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.saved-rating-dismiss:hover {
+  background: #f5f5f5;
+}
