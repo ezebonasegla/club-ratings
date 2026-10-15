@@ -18,6 +18,8 @@ import './pages/ProfilePage.css';
 import './pages/FriendsPage.css';
 import './pages/FriendRatingsPage.css';
 import './App.css';
+import './styles/dark.css';
+import './styles/dark-overrides.css';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ManageRatings = lazy(() => import('./pages/ManageRatings'));

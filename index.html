@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Sistema de valoraciones para jugadores - Registra y analiza actuaciones partido a partido de tu club favorito del fútbol argentino" />
     <meta name="keywords" content="fútbol argentino, valoraciones, estadísticas, jugadores, partidos, River Plate, Boca Juniors, Racing, Independiente" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      // Aplicar modo oscuro antes de renderizar (evita un destello claro)
+      try {
+        var s = localStorage.getItem('clubRatings:colorScheme');
+        if (s !== 'dark' && s !== 'light') s = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = s;
+      } catch (e) {}
+    </script>
     <title>Club Ratings - Valoraciones de Fútbol Argentino</title>
   </head>
   <body>

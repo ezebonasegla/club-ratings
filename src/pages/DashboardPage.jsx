@@ -6,13 +6,14 @@ import {
   ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
 } from 'recharts';
 import {
-  Calendar, Search, ArrowDownWideNarrow, ArrowUpNarrowWide, Minus, Plus, X, Trophy, Flame, Target, Activity, Star, ChevronRight, SlidersHorizontal,
+  Calendar, Search, Share2, ArrowDownWideNarrow, ArrowUpNarrowWide, Minus, Plus, X, Trophy, Flame, Target, Activity, Star, ChevronRight, SlidersHorizontal,
 } from 'lucide-react';
 import {
   POSITIONS, RESULT_LABELS, RESULT_SHORT, SORT_OPTIONS, buildMatches, filterMatches, teamSummary, buildPlayers,
   sortPlayers, ratingTier, fmt, fmtSigned, chartColor,
 } from './dashboard/stats';
 import PlayerDetail from './dashboard/PlayerDetail';
+import SharePlayersModal from './dashboard/SharePlayersModal';
 import './DashboardPage.css';
 
 const RESULT_COLORS = { win: '#1e9e5a', draw: '#d9a400', loss: '#d64545' };
@@ -61,6 +62,7 @@ const DashboardPage = () => {
   const [sortBy, setSortBy] = useState('avg');
   const [sortDir, setSortDir] = useState('desc');
   const [selectedId, setSelectedId] = useState(null);
+  const [showShare, setShowShare] = useState(false);
 
   const color = chartColor(club);
 
@@ -142,6 +144,7 @@ const DashboardPage = () => {
   const selectedPlayer = players.find(p => p.id === selectedId) || null;
   const selectedRank = selectedPlayer ? avgRanking.findIndex(p => p.id === selectedPlayer.id) + 1 : 0;
   const closeDetail = useCallback(() => setSelectedId(null), []);
+  const closeShare = useCallback(() => setShowShare(false), []);
 
   const setFilter = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
   const activeFilterCount = Object.keys(DEFAULT_FILTERS).filter(k => filters[k] !== DEFAULT_FILTERS[k]).length;
@@ -186,6 +189,17 @@ const DashboardPage = () => {
     { value: 'last20', label: 'Últimos 20' },
     ...years.map(y => ({ value: String(y), label: String(y) })),
   ];
+
+  // Resumen de filtros para la imagen compartida
+  const filtersLabel = [
+    periodOptions.find(o => o.value === filters.period)?.label,
+    filters.competition !== 'all' ? filters.competition : null,
+    filters.venue === 'home' ? 'Local' : filters.venue === 'away' ? 'Visitante' : null,
+    filters.result !== 'all' ? { win: 'Ganados', draw: 'Empates', loss: 'Perdidos' }[filters.result] : null,
+    position !== 'all' ? POSITIONS[position]?.label + 's' : null,
+    minApps > 1 ? `mín. ${minApps} partidos` : null,
+    `${summary.matches} ${summary.matches === 1 ? 'partido' : 'partidos'}`,
+  ].filter(Boolean).join(' · ');
 
   const kpiDelta = summary.recentAvg !== null && summary.teamAvg !== null && summary.matches > 5
     ? summary.recentAvg - summary.teamAvg
@@ -357,10 +371,19 @@ const DashboardPage = () => {
             {/* Ranking de jugadores */}
             <section className="dash-card">
               <div className="dash-card-head">
-                <h2>Jugadores</h2>
-                <span className="dash-muted">
-                  {visiblePlayers.length} de {players.length} · tocá uno para ver su detalle
-                </span>
+                <div>
+                  <h2>Jugadores</h2>
+                  <span className="dash-muted">
+                    {visiblePlayers.length} de {players.length} · tocá uno para ver su detalle
+                  </span>
+                </div>
+                <button
+                  className="dash-share-open"
+                  onClick={() => setShowShare(true)}
+                  disabled={visiblePlayers.length === 0}
+                >
+                  <Share2 size={16} /> Compartir
+                </button>
               </div>
 
               <div className="dash-controls">
@@ -537,6 +560,17 @@ const DashboardPage = () => {
               </section>
             </div>
           </>
+        )}
+
+        {showShare && (
+          <SharePlayersModal
+            players={visiblePlayers}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            club={club}
+            filtersLabel={filtersLabel}
+            onClose={closeShare}
+          />
         )}
 
         {selectedPlayer && (

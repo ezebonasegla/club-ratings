@@ -1,0 +1,93 @@
+/* Ajustes manuales del modo oscuro (se cargan después de dark.css, que es generado) */
+
+:root[data-theme="dark"] body {
+  background-color: #0f1115;
+  color: #e6e8ee;
+}
+
+/* Dashboard: paleta propia con superficies elevadas (más claras que el fondo) */
+:root[data-theme="dark"] .dash {
+  --dash-bg: #0f1115;
+  --dash-card: #171a21;
+  --dash-border: #272b35;
+  --dash-text: #e8eaef;
+  --dash-muted: #9aa1ad;
+  --dash-soft: #1e222b;
+  --dash-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --tier-elite: #1fa863;
+  --tier-good: #3fae6a;
+  --tier-ok: #c99a00;
+  --tier-meh: #e07b26;
+  --tier-bad: #d64545;
+  --up: #4cc985;
+  --down: #f07272;
+}
+
+:root[data-theme="dark"] .dash .tier-text-elite { color: #4cd38a; }
+:root[data-theme="dark"] .dash .tier-text-good { color: #6fd193; }
+:root[data-theme="dark"] .dash .tier-text-ok { color: #e8bd2c; }
+:root[data-theme="dark"] .dash .tier-text-meh { color: #f29a55; }
+:root[data-theme="dark"] .dash .tier-text-bad { color: #f07272; }
+
+:root[data-theme="dark"] .dash-sheet,
+:root[data-theme="dark"] .dash-sheet-body { background: #0f1115; color: #e8eaef; }
+:root[data-theme="dark"] .dash-sheet-header,
+:root[data-theme="dark"] .dash-sheet-section,
+:root[data-theme="dark"] .dash-hero,
+:root[data-theme="dark"] .dash-stat { background: #171a21; border-color: #272b35; }
+:root[data-theme="dark"] .dash-sheet h2,
+:root[data-theme="dark"] .dash-sheet h3,
+:root[data-theme="dark"] .dash-sheet .dash-icon-btn { color: #e8eaef; }
+:root[data-theme="dark"] .dash-sheet h4,
+:root[data-theme="dark"] .dash-sheet-title p,
+:root[data-theme="dark"] .dash-stat small,
+:root[data-theme="dark"] .dash-stat span,
+:root[data-theme="dark"] .dash-hero-item small,
+:root[data-theme="dark"] .dash-split-apps,
+:root[data-theme="dark"] .dash-mini-match small { color: #9aa1ad; }
+:root[data-theme="dark"] .dash-split-bar { background: #272b35; }
+:root[data-theme="dark"] .dash-mini-match { border-color: #272b35; }
+:root[data-theme="dark"] .dash-log-stats { color: #b8bec9; }
+:root[data-theme="dark"] .dash-sheet-overlay { background: rgba(0, 0, 0, 0.7); }
+
+/* Gráficos (recharts dibuja SVG con colores fijos) */
+:root[data-theme="dark"] .recharts-cartesian-grid line { stroke: #2a2f3a; }
+:root[data-theme="dark"] .recharts-cartesian-axis-line,
+:root[data-theme="dark"] .recharts-cartesian-axis-tick-line { stroke: #3a404c; }
+:root[data-theme="dark"] .recharts-cartesian-axis-tick-value tspan { fill: #9aa1ad; }
+:root[data-theme="dark"] .recharts-default-tooltip {
+  background: #1e222b !important;
+  border-color: #272b35 !important;
+  color: #e8eaef;
+}
+:root[data-theme="dark"] .recharts-tooltip-cursor { fill: rgba(255, 255, 255, 0.05); }
+
+/* Tooltips y tarjetas de compartir conservan su estilo propio */
+:root[data-theme="dark"] .dash-tooltip { background: #2a2f3a; }
+
+/* Selects con flecha clara */
+:root[data-theme="dark"] .dash select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa1ad' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Botón de cambio de tema en el header */
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-color, #fff);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* Compartir ranking: botón secundario en oscuro (la tarjeta exportada queda clara) */
+:root[data-theme="dark"] .dash-share-btn.secondary { background: #1e222b; color: #e8eaef; border-color: #2f3440; }
+:root[data-theme="dark"] .dash-share-count-row { color: #e8eaef; }

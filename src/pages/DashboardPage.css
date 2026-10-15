@@ -1000,3 +1000,177 @@
   .dash-sheet { max-width: 820px; border-radius: 20px; max-height: 90vh; }
   .dash-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ==========================================================================
+   Compartir ranking
+   ========================================================================== */
+.dash-share-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: var(--primary-color);
+  color: var(--text-color, #fff);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: center;
+}
+
+.dash-share-open:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dash-share-sheet { max-width: 560px; }
+
+.dash-share-count { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.dash-share-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 650;
+}
+
+.dash-share-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  position: sticky;
+  bottom: 0;
+}
+
+.dash-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.85rem 0.75rem;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.dash-share-btn.primary { background: var(--primary-color); color: var(--text-color, #fff); }
+.dash-share-btn.secondary { background: #fff; color: #1b1f2a; border-color: #d6d9e0; }
+.dash-share-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Tarjeta exportada: colores fijos (no cambia con el modo oscuro) */
+.pshare-wrap { display: flex; justify-content: center; }
+
+.pshare-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  color: #1b1f2a;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-variant-numeric: tabular-nums;
+}
+
+.pshare-header {
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pshare-header strong { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+.pshare-header span { font-size: 0.85rem; opacity: 0.92; font-weight: 600; }
+
+.pshare-filters {
+  padding: 0.55rem 1.25rem;
+  font-size: 0.75rem;
+  color: #5b6270;
+  background: #f4f5f8;
+  border-bottom: 1px solid #e6e8ee;
+}
+
+.pshare-cols,
+.pshare-row {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) 2.2rem auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.25rem;
+}
+
+.pshare-cols {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #8a909c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 0.6rem;
+  padding-bottom: 0.35rem;
+}
+
+.pshare-cols span:nth-child(n + 3) { text-align: center; }
+
+.pshare-row {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-top: 1px solid #eef0f4;
+  font-size: 0.9rem;
+}
+
+.pshare-row.top .pshare-rank { color: #b8860b; }
+
+.pshare-rank { font-weight: 800; color: #8a909c; text-align: center; }
+
+.pshare-name {
+  font-weight: 650;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  line-height: 1.25;
+}
+
+.pshare-name > span { min-width: 0; overflow-wrap: anywhere; }
+
+.pshare-name small {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #8a909c;
+  border: 1px solid #e0e3ea;
+  border-radius: 4px;
+  padding: 0 0.25rem;
+}
+
+.pshare-apps { color: #5b6270; text-align: center; font-size: 0.82rem; min-width: 2.2rem; }
+
+.pshare-value {
+  min-width: 3rem;
+  text-align: center;
+  font-weight: 800;
+  padding: 0.2rem 0.45rem;
+  border-radius: 7px;
+  background: #eef0f4;
+  color: #1b1f2a;
+}
+
+.pshare-tier-elite { background: #0f8a4b; color: #fff; }
+.pshare-tier-good { background: #3fae6a; color: #fff; }
+.pshare-tier-ok { background: #d9a400; color: #fff; }
+.pshare-tier-meh { background: #e07b26; color: #fff; }
+.pshare-tier-bad { background: #d64545; color: #fff; }
+
+.pshare-footer {
+  text-align: center;
+  font-size: 0.72rem;
+  color: #8a909c;
+  padding: 0.7rem;
+  border-top: 1px solid #eef0f4;
+}
+
+@media (min-width: 900px) {
+  .dash-sheet-overlay .dash-share-sheet { max-width: 560px; }
+}

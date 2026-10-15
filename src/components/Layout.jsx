@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader, Users } from 'lucide-react';
+import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader, Users, Moon, Sun } from 'lucide-react';
+import { useColorScheme } from '../hooks/useColorScheme';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { addSecondaryClub } from '../services/cloudUserConfigService';
@@ -12,6 +13,7 @@ const Layout = () => {
   const { club, allClubs, switchActiveClub, primaryClubId, secondaryClubIds, refreshUserClubs } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isDark, toggle: toggleColorScheme } = useColorScheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clubSelectorOpen, setClubSelectorOpen] = useState(false);
   const [showAddClubMenu, setShowAddClubMenu] = useState(false);
@@ -187,6 +189,15 @@ const Layout = () => {
           
           {/* Campanita de notificaciones - siempre visible */}
           {user && <NotificationBell />}
+
+          <button
+            className="theme-toggle"
+            onClick={toggleColorScheme}
+            aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
+            title={isDark ? 'Modo claro' : 'Modo oscuro'}
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           
           <button 
             className="mobile-menu-toggle"
