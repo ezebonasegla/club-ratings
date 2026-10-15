@@ -42,13 +42,20 @@ const requestSofascore = async (url) => {
 // Las peticiones en curso se comparten, así una precarga no se duplica.
 const responseCache = new Map(); // url -> { promise, expires }
 
-const fetchFromSofascore = (url, ttlMs = 10 * 60 * 1000) => {
+const fetchFromSofascore = (url, ttlMs = 10 * 60 * 1000, force = false) => {
   const cached = responseCache.get(url);
-  if (cached && cached.expires > Date.now()) {
+  if (!force && cached && cached.expires > Date.now()) {
     return cached.promise;
   }
 
-  const promise = requestSofascore(url);
+  const promise = requestSofascore(url).then(response => {
+    // SofaScore a veces responde con un objeto de error en vez de los datos
+    if (!response.data || response.data.error) {
+      const detail = response.data?.error?.message || response.data?.error?.code || 'respuesta inválida';
+      throw new Error(`SofaScore devolvió un error (${detail})`);
+    }
+    return response;
+  });
   responseCache.set(url, { promise, expires: Date.now() + ttlMs });
   promise.catch(() => responseCache.delete(url));
   return promise;
@@ -389,10 +396,23 @@ export const prefetchMatchData = (matchUrl) => {
  * @returns {string|null} URL del último partido o null si no encuentra
  */
 export const getLastMatchUrl = async (teamId) => {
+  let response;
   try {
     // Obtener los últimos eventos del equipo
-    const response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL);
+    response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL);
+  } catch {
+    // Reintentar una vez sin caché (el proxy falla a veces de forma intermitente)
+    try {
+      response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL, true);
+    } catch (error) {
+      console.error('Error obteniendo último partido:', error);
+      const status = error.response?.status;
+      const detail = error.response?.data?.message || error.message;
+      throw new Error(`No se pudo conectar con SofaScore${status ? ` (error ${status})` : ''}: ${detail}. Probá de nuevo en un momento.`);
+    }
+  }
 
+  try {
     const now = Math.floor(Date.now() / 1000); // Timestamp actual en segundos
 
     if (response.data && response.data.events && response.data.events.length > 0) {
@@ -416,7 +436,7 @@ export const getLastMatchUrl = async (teamId) => {
 
     return null;
   } catch (error) {
-    console.error('Error obteniendo último partido:', error);
+    console.error('Error procesando último partido:', error);
     return null;
   }
 };

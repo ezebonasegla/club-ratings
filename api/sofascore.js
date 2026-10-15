@@ -72,12 +72,16 @@ export default async function handler(req, res) {
 
     // Cachear en el CDN de Vercel: ScraperAPI tarda varios segundos por petición
     // y las mismas URLs se piden una y otra vez (mismo club, mismo partido).
+    // Nunca cachear respuestas con error (p. ej. SofaScore bloqueando la petición)
     const isTeamEvents = /\/team\/\d+\/events\//.test(url);
+    const isValid = data && typeof data === 'object' && !data.error;
     res.setHeader(
       'Cache-Control',
-      isTeamEvents
-        ? 'public, s-maxage=120, stale-while-revalidate=600'
-        : 'public, s-maxage=600, stale-while-revalidate=86400'
+      !isValid
+        ? 'no-store'
+        : isTeamEvents
+          ? 'public, s-maxage=60'
+          : 'public, s-maxage=600'
     );
     return res.status(200).json(data);
   } catch (error) {
