@@ -17,6 +17,9 @@ const PROXY_URL = '/api/sofascore';
  * En desarrollo: petición directa a Sofascore
  * En producción: a través del proxy con ScraperAPI
  */
+// Tiempo máximo por petición: ScraperAPI es lento, pero nunca debe quedar colgado
+const REQUEST_TIMEOUT_MS = 45000;
+
 const requestSofascore = async (url) => {
   if (IS_DEV) {
     // En desarrollo: petición directa sin proxy
@@ -27,13 +30,14 @@ const requestSofascore = async (url) => {
         'Accept-Language': 'es-ES,es;q=0.9',
         'Referer': 'https://www.sofascore.com/',
         'Origin': 'https://www.sofascore.com'
-      }
+      },
+      timeout: REQUEST_TIMEOUT_MS
     });
     return response;
   } else {
     // En producción: a través del proxy con ScraperAPI
     const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
-    const response = await axios.get(proxyUrl);
+    const response = await axios.get(proxyUrl, { timeout: REQUEST_TIMEOUT_MS });
     return response;
   }
 };
@@ -365,6 +369,13 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       throw error;
     }
 
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('SofaScore tardó demasiado en responder. Probá de nuevo en un momento.');
+    }
+    if (error.response?.status >= 500 || error.message?.startsWith('SofaScore devolvió')) {
+      throw new Error(`No se pudo conectar con SofaScore${error.response?.status ? ` (error ${error.response.status})` : ''}. Probá de nuevo en un momento.`);
+    }
+
     throw new Error('URL de partido inválida o no se pudo obtener los datos. Verifica que la URL sea correcta.');
   }
 };
@@ -400,14 +411,18 @@ export const getLastMatchUrl = async (teamId) => {
   try {
     // Obtener los últimos eventos del equipo
     response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL);
-  } catch {
-    // Reintentar una vez sin caché (el proxy falla a veces de forma intermitente)
+  } catch (firstError) {
+    // Reintentar una vez sin caché (el proxy falla a veces de forma intermitente),
+    // salvo que haya sido un timeout: reintentar duplicaría la espera
     try {
+      if (firstError.code === 'ECONNABORTED') throw firstError;
       response = await fetchFromSofascore(lastEventsUrl(teamId), LAST_EVENTS_TTL, true);
     } catch (error) {
       console.error('Error obteniendo último partido:', error);
       const status = error.response?.status;
-      const detail = error.response?.data?.message || error.message;
+      const detail = error.code === 'ECONNABORTED'
+        ? 'SofaScore tardó demasiado en responder'
+        : error.response?.data?.message || error.message;
       throw new Error(`No se pudo conectar con SofaScore${status ? ` (error ${status})` : ''}: ${detail}. Probá de nuevo en un momento.`);
     }
   }

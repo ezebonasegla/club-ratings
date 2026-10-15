@@ -33,7 +33,8 @@ export default async function handler(req, res) {
       const response = await fetch(scraperUrl, {
         headers: {
           'Accept': 'application/json',
-        }
+        },
+        signal: AbortSignal.timeout(40000)
       });
 
       if (!response.ok) {

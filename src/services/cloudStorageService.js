@@ -124,7 +124,11 @@ export const getAllRatingsFromCloud = async (userId, clubId = null, primaryClubI
  */
 export const checkMatchAlreadyRated = async (userId, matchId) => {
   try {
-    const ratingsResult = await getAllRatingsFromCloud(userId);
+    // Si Firestore no responde en 8s, seguir sin bloquear la carga del partido
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout verificando valoraciones')), 8000)
+    );
+    const ratingsResult = await Promise.race([getAllRatingsFromCloud(userId), timeout]);
     
     if (ratingsResult.success) {
       // Buscar si existe una valoración con este matchInfo que contenga el matchId
@@ -144,6 +148,8 @@ export const checkMatchAlreadyRated = async (userId, matchId) => {
     return { isRated: false, ratingId: null };
   } catch (error) {
     console.error('Error al verificar partido:', error);
+    // Descartar una consulta colgada para que el próximo intento la rehaga
+    invalidateRatingsCache(userId);
     return { isRated: false, ratingId: null };
   }
 };
