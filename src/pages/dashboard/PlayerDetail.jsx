@@ -59,7 +59,10 @@ const PlayerDetail = ({ player, rank, totalRanked, color, onClose }) => {
   }, [onClose]);
 
   const chartData = useMemo(
-    () => [...player.log].reverse().map(l => ({
+    () => [...player.log].reverse().map((l, i) => ({
+      // Clave única por partido: con nombres repetidos (mismo rival o mismas
+      // primeras palabras) el tooltip mostraba los datos de otro partido
+      x: i,
       rival: l.rival,
       label: l.rival.split(' ').slice(0, 2).join(' '),
       date: l.date,
@@ -173,7 +176,7 @@ const PlayerDetail = ({ player, rank, totalRanked, color, onClose }) => {
                 <ResponsiveContainer width="100%" height={240}>
                   <ComposedChart data={chartData} margin={{ top: 10, right: 8, left: -24, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e8ec" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
+                    <XAxis dataKey="x" tickFormatter={i => chartData[i]?.label ?? ''} tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
                     <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 11 }} />
                     <Tooltip content={<ChartTooltip />} />
                     <ReferenceLine y={player.avg} stroke={color} strokeOpacity={0.35} strokeDasharray="4 4" />

@@ -129,7 +129,8 @@ const DashboardPage = () => {
   }, [eligible]);
 
   const trendData = useMemo(
-    () => [...matches].reverse().filter(m => m.teamAvg !== null).map(m => ({
+    () => [...matches].reverse().filter(m => m.teamAvg !== null).map((m, i) => ({
+      x: i, // clave única por partido (ver PlayerDetail)
       label: m.rival.split(' ').slice(0, 2).join(' '),
       rival: m.rival,
       date: m.date,
@@ -324,7 +325,7 @@ const DashboardPage = () => {
                   <ResponsiveContainer width="100%" height={230}>
                     <ComposedChart data={trendData} margin={{ top: 10, right: 8, left: -24, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e8ec" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={18} />
+                      <XAxis dataKey="x" tickFormatter={i => trendData[i]?.label ?? ''} tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={18} />
                       <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 11 }} />
                       <Tooltip content={<TeamTooltip />} />
                       {summary.teamAvg !== null && (
