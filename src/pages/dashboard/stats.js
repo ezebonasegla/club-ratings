@@ -123,8 +123,9 @@ export const buildMatches = (ratings) =>
     })
     .sort((a, b) => b.time - a.time);
 
-export const filterMatches = (matches, { competition, period, venue, result }) => {
+export const filterMatches = (matches, { competition, period, venue, result, attendance = 'all' }) => {
   let list = matches;
+  if (attendance !== 'all') list = list.filter(m => (attendance === 'yes' ? m.attended : !m.attended));
   if (competition !== 'all') list = list.filter(m => m.competition === competition);
   if (venue !== 'all') list = list.filter(m => m.venue === venue);
   if (result !== 'all') list = list.filter(m => m.result === result);

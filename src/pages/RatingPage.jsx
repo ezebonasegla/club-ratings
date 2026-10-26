@@ -4,6 +4,7 @@ import { saveRatingToCloud, checkMatchAlreadyRated, prefetchUserRatings } from '
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Loader, AlertCircle, Check, Calendar, X, HelpCircle, Share2, Plus } from 'lucide-react';
+import { getAttendance, saveAttendance, attendanceId, buildAttendanceFromMatch, ensureSeedImported } from '../services/attendanceService';
 import ShareRatingModal from '../components/ShareRatingModal';
 import './RatingPage.css';
 
@@ -21,6 +22,9 @@ const RatingPage = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showOldMatchModal, setShowOldMatchModal] = useState(false);
+  // ¿Fue a la cancha? (tilde, por defecto no)
+  const [attended, setAttended] = useState(false);
+  const [existingAttendance, setExistingAttendance] = useState(null);
 
   // Precargar en segundo plano lo que necesita "Valorar Último Partido":
   // la lista de partidos del club y las valoraciones del usuario (para saber si ya lo valoró)
@@ -31,6 +35,11 @@ const RatingPage = () => {
   useEffect(() => {
     if (user) prefetchUserRatings(user.uid);
   }, [user]);
+
+  // Primera vez: traer los partidos de "Mi River en la cancha" (sólo la cuenta dueña)
+  useEffect(() => {
+    if (user && clubId) ensureSeedImported(user, clubId);
+  }, [user, clubId]);
 
   // Carga el partido mientras en paralelo verifica si ya fue valorado
   const loadMatchIfNotRated = async (url) => {
@@ -52,6 +61,20 @@ const RatingPage = () => {
 
   const initializeMatch = (data) => {
     setMatchData(data);
+    setAttended(false);
+    setExistingAttendance(null);
+
+    // Si el partido ya está en "Mi cancha" (p. ej. importado), viene marcado que fue
+    if (user && data.matchInfo?.isoDate) {
+      getAttendance(user.uid, clubId).then(result => {
+        const id = attendanceId(user.uid, clubId, data.matchInfo.isoDate);
+        const found = result.data.find(a => a.id === id);
+        if (found) {
+          setExistingAttendance(found);
+          setAttended(true);
+        }
+      });
+    }
 
     // Inicializar ratings vacíos
     const initialRatings = {};
@@ -175,6 +198,7 @@ const RatingPage = () => {
           : (playerRatings[player.id] !== '' ? parseFloat(playerRatings[player.id]) : null),
         skipped: skipPlayers[player.id] || false
       })),
+      attended,
       timestamp: new Date().toISOString()
     };
 
@@ -184,7 +208,22 @@ const RatingPage = () => {
       
       if (result.success) {
         setError('');
-        setSavedRating({ id: result.id, ...ratingData, clubId });
+
+        // Registrar (o vincular) el partido en "Mi cancha"
+        let attendanceStatus = null;
+        if (attended && matchData.matchInfo?.isoDate) {
+          const existing = await getAttendance(user.uid, clubId);
+          const link = { ratingId: result.id, matchId: ratingData.matchId };
+          const entry = existingAttendance
+            ? { fecha: existingAttendance.fecha, ...link } // ya estaba cargado: sólo se vincula
+            : { ...buildAttendanceFromMatch(matchData, existing.data), ...link, source: 'rating' };
+          const saved = await saveAttendance(user.uid, clubId, entry);
+          attendanceStatus = saved.success
+            ? (existingAttendance ? 'linked' : 'added')
+            : saved.error;
+        }
+
+        setSavedRating({ id: result.id, ...ratingData, clubId, attendanceStatus });
 
         // Limpiar formulario: queda la tarjeta de éxito con el botón de compartir
         setMatchData(null);
@@ -267,6 +306,13 @@ const RatingPage = () => {
             <p className="saved-rating-match">
               {club?.shortName || club?.name} vs {savedRating.matchInfo.rival} · {savedRating.matchInfo.score}
             </p>
+            {savedRating.attendanceStatus && (
+              <p className={`saved-rating-attendance ${['added', 'linked'].includes(savedRating.attendanceStatus) ? '' : 'error'}`}>
+                {savedRating.attendanceStatus === 'added' && '🏟️ Agregado a tus partidos en la cancha'}
+                {savedRating.attendanceStatus === 'linked' && '🏟️ Vinculado con tu registro de la cancha'}
+                {!['added', 'linked'].includes(savedRating.attendanceStatus) && `No se pudo agregar a "Cancha": ${savedRating.attendanceStatus}`}
+              </p>
+            )}
             <div className="saved-rating-actions">
               <button
                 className="saved-rating-share"
@@ -378,6 +424,23 @@ const RatingPage = () => {
                 )}
               </div>
             </div>
+
+            <label className={`attendance-check ${attended ? 'checked' : ''}`}>
+              <input
+                type="checkbox"
+                checked={attended}
+                onChange={e => setAttended(e.target.checked)}
+              />
+              <span className="attendance-check-box" aria-hidden="true">{attended ? '✓' : ''}</span>
+              <span className="attendance-check-text">
+                <strong>🏟️ Fui a la cancha</strong>
+                <small>
+                  {existingAttendance
+                    ? 'Ya está en tus partidos en la cancha'
+                    : 'Se agrega solo a tu registro de la cancha'}
+                </small>
+              </span>
+            </label>
 
             <div className="players-section">
               <h2>Jugadores Titulares</h2>

@@ -170,8 +170,12 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
     const homeScore = eventData.homeScore?.display || 0;
     const awayScore = eventData.awayScore?.display || 0;
 
+    const startDate = new Date(eventData.startTimestamp * 1000);
+    const pad = n => String(n).padStart(2, '0');
     const matchInfo = {
-      date: new Date(eventData.startTimestamp * 1000).toLocaleDateString('es-AR'),
+      date: startDate.toLocaleDateString('es-AR'),
+      isoDate: `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())}`,
+      stadium: eventData.venue?.stadium?.name || eventData.venue?.name || '',
       homeTeam: eventData.homeTeam.name,
       awayTeam: eventData.awayTeam.name,
       competition: eventData.tournament.name,
@@ -353,12 +357,29 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       delete player.lastEntryMinute;
     });
 
+    // Goles de cada equipo (para el registro de partidos en la cancha).
+    // En un autogol, Sofascore marca como isHome al equipo beneficiado y
+    // player es quien la metió en contra: queda en la lista del beneficiado.
+    const goalType = cls => (cls === 'penalty' ? 'penal' : cls === 'ownGoal' ? 'autogol' : 'gol');
+    const goalEvents = sortedIncidents.filter(i => i.incidentType === 'goal' && i.player?.name);
+    const goals = {
+      user: goalEvents.filter(i => i.isHome === isUserTeamHome).map(i => ({ jugador: i.player.name, tipo: goalType(i.incidentClass), minuto: i.time ?? null })),
+      rival: goalEvents.filter(i => i.isHome !== isUserTeamHome).map(i => ({ jugador: i.player.name, tipo: goalType(i.incidentClass), minuto: i.time ?? null })),
+    };
+    const homePen = eventData.homeScore?.penalties;
+    const awayPen = eventData.awayScore?.penalties;
+    const penalties = homePen !== undefined && awayPen !== undefined
+      ? { club: isUserTeamHome ? homePen : awayPen, rival: isUserTeamHome ? awayPen : homePen }
+      : null;
+
     return {
       matchInfo: {
         ...matchInfo,
         rival
       },
-      players
+      players,
+      goals,
+      penalties
     };
 
   } catch (error) {

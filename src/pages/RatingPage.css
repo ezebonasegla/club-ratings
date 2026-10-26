@@ -840,3 +840,45 @@ h2 {
 .saved-rating-dismiss:hover {
   background: #f5f5f5;
 }
+
+/* Tilde: fui a la cancha */
+.attendance-check {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: #ffffff;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 2rem;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.attendance-check.checked { border-color: #1e9e5a; background: #effaf3; }
+.attendance-check input { position: absolute; opacity: 0; pointer-events: none; }
+.attendance-check input:focus-visible + .attendance-check-box { outline: 3px solid color-mix(in srgb, var(--primary-color) 40%, transparent); }
+
+.attendance-check-box {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 2px solid #bbb;
+  background: #fff;
+  color: #fff;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attendance-check.checked .attendance-check-box { background: #1e9e5a; border-color: #1e9e5a; }
+
+.attendance-check-text { display: flex; flex-direction: column; gap: 0.1rem; color: #1a1a1a; }
+.attendance-check-text strong { font-size: 1.05rem; }
+.attendance-check-text small { font-size: 0.85rem; color: #666; }
+
+.saved-rating-attendance { margin: -0.5rem 0 1rem; font-weight: 600; color: #2e5e2e; }
+.saved-rating-attendance.error { color: #c00; }

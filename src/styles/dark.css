@@ -357,6 +357,136 @@
   color: inherit;
 }
 
+/* ---- pages/CanchaPage.css ---- */
+:root[data-theme="dark"] .cancha-error {
+  border-color: #f0b4b4;
+  color: var(--dash-text);
+}
+
+:root[data-theme="dark"] .cancha-error svg {
+  color: #d64545;
+}
+
+:root[data-theme="dark"] .cancha-error code {
+  background: var(--dash-soft);
+}
+
+:root[data-theme="dark"] .cancha-res {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .cancha-res i {
+  border: 2px solid var(--dash-card);
+}
+
+:root[data-theme="dark"] .cancha-tag {
+  border: 1px solid currentColor;
+}
+
+:root[data-theme="dark"] .cancha-bar {
+  background: var(--dash-border);
+}
+
+:root[data-theme="dark"] .cancha-row {
+  border-bottom: 1px solid var(--dash-border);
+}
+
+:root[data-theme="dark"] .cancha-row:last-child {
+  border-bottom: none;
+}
+
+:root[data-theme="dark"] .cancha-row-btn {
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: inherit;
+}
+
+:root[data-theme="dark"] .cancha-row-btn:hover {
+  background: var(--dash-soft);
+}
+
+:root[data-theme="dark"] .cancha-row-main small {
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] .cancha-meter {
+  background: var(--dash-border);
+}
+
+:root[data-theme="dark"] .cancha-vs-col {
+  background: var(--dash-soft);
+  border: 1px solid var(--dash-border);
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] .cancha-vs-col small {
+  color: var(--dash-text);
+}
+
+:root[data-theme="dark"] .cancha-vs-col b {
+  color: var(--dash-text);
+}
+
+:root[data-theme="dark"] .cancha-vs-col .dash-pill {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .cancha-match {
+  border-bottom: 1px solid var(--dash-border);
+}
+
+:root[data-theme="dark"] .cancha-match:last-child {
+  border-bottom: none;
+}
+
+:root[data-theme="dark"] .cancha-meta {
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] .cancha-goal-line {
+  color: var(--dash-text);
+}
+
+:root[data-theme="dark"] .cancha-goal-line.rival {
+  color: #d64545;
+}
+
+:root[data-theme="dark"] .cancha-notes {
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] .cancha-match-actions .dash-icon-btn {
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] .cancha-scorer {
+  border: none;
+  border-bottom: 1px solid var(--dash-border);
+  background: none;
+  color: inherit;
+}
+
+:root[data-theme="dark"] .cancha-scorer:last-child {
+  border-bottom: none;
+}
+
+:root[data-theme="dark"] .cancha-scorer:not(:disabled):hover {
+  background: var(--dash-soft);
+}
+
+:root[data-theme="dark"] .cancha-form input,
+:root[data-theme="dark"] .cancha-form select {
+  color: var(--dash-text, #c9ccd3);
+  background: var(--dash-soft, #181a1d);
+  border: 1px solid var(--dash-border, #22252a);
+}
+
+:root[data-theme="dark"] .cancha-warn {
+  color: #d64545;
+}
+
 /* ---- pages/ClubSelection.css ---- */
 :root[data-theme="dark"] .club-selection-page {
   background: linear-gradient(135deg, #1a1c20 0%, #2a2d33 100%);
@@ -2371,6 +2501,47 @@
 
 :root[data-theme="dark"] .saved-rating-dismiss:hover {
   background: #1a1c20;
+}
+
+:root[data-theme="dark"] .attendance-check {
+  background: #121416;
+  border: 2px solid #2c2f36;
+}
+
+:root[data-theme="dark"] .attendance-check.checked {
+  border-color: #1e9e5a;
+  background: #1a1c20;
+}
+
+:root[data-theme="dark"] .attendance-check input:focus-visible + .attendance-check-box {
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
+}
+
+:root[data-theme="dark"] .attendance-check-box {
+  border: 2px solid #464a55;
+  background: #121416;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .attendance-check.checked .attendance-check-box {
+  background: #1e9e5a;
+  border-color: #1e9e5a;
+}
+
+:root[data-theme="dark"] .attendance-check-text {
+  color: #d1d3d9;
+}
+
+:root[data-theme="dark"] .attendance-check-text small {
+  color: #8a91a0;
+}
+
+:root[data-theme="dark"] .saved-rating-attendance {
+  color: #91c991;
+}
+
+:root[data-theme="dark"] .saved-rating-attendance.error {
+  color: #eb7070;
 }
 
 /* ---- styles/legacy-shared.css ---- */

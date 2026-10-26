@@ -5,6 +5,7 @@ El sistema de amigos necesita permisos en Firestore para las colecciones:
 - `friendRequests` (solicitudes de amistad)
 - `comments` (comentarios)
 - `notifications` (notificaciones)
+- `attendance` (partidos en la cancha, módulo "Cancha")
 
 ## Solución
 
@@ -34,6 +35,7 @@ Las reglas en `firestore.rules` incluyen:
 - ✅ **friendRequests**: Lectura/escritura para remitente y receptor
 - ✅ **comments**: Lectura pública, creación autenticada, eliminación solo propietario
 - ✅ **notifications**: Acceso solo para el usuario destinatario
+- ✅ **attendance**: Privado, solo el dueño puede leer y escribir sus partidos en la cancha
 
 ## Verificar
 

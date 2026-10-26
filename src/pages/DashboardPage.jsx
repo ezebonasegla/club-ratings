@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getAllRatingsFromCloud } from '../services/cloudStorageService';
+import { getAttendance } from '../services/attendanceService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -17,7 +18,8 @@ import SharePlayersModal from './dashboard/SharePlayersModal';
 import './DashboardPage.css';
 
 const RESULT_COLORS = { win: '#1e9e5a', draw: '#d9a400', loss: '#d64545' };
-const DEFAULT_FILTERS = { period: 'all', competition: 'all', venue: 'all', result: 'all' };
+const DEFAULT_FILTERS = { period: 'all', competition: 'all', venue: 'all', result: 'all', attendance: 'all' };
+const isoOf = time => { const d = new Date(time); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 const Segmented = ({ value, onChange, options, label }) => (
   <div className="dash-segmented" role="group" aria-label={label}>
@@ -51,6 +53,7 @@ const DashboardPage = () => {
   const { user } = useAuth();
   const { club, clubId, primaryClubId } = useTheme();
   const [ratings, setRatings] = useState([]);
+  const [attendedDates, setAttendedDates] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -72,8 +75,12 @@ const DashboardPage = () => {
 
     const load = async () => {
       setLoading(true);
-      const result = await getAllRatingsFromCloud(user.uid, clubId, primaryClubId);
+      const [result, attendance] = await Promise.all([
+        getAllRatingsFromCloud(user.uid, clubId, primaryClubId),
+        getAttendance(user.uid, clubId),
+      ]);
       if (cancelled) return;
+      setAttendedDates(new Set(attendance.data.map(a => a.fecha)));
       if (result.success) {
         setRatings(result.data);
         // Con muchos partidos, por defecto exigir un mínimo para que el ranking sea representativo
@@ -89,7 +96,10 @@ const DashboardPage = () => {
     return () => { cancelled = true; };
   }, [user, clubId, primaryClubId]);
 
-  const allMatches = useMemo(() => buildMatches(ratings), [ratings]);
+  const allMatches = useMemo(
+    () => buildMatches(ratings).map(m => ({ ...m, attended: attendedDates.has(isoOf(m.time)) })),
+    [ratings, attendedDates]
+  );
   const competitions = useMemo(
     () => [...new Set(allMatches.map(m => m.competition))].sort(),
     [allMatches]
@@ -197,6 +207,7 @@ const DashboardPage = () => {
     filters.competition !== 'all' ? filters.competition : null,
     filters.venue === 'home' ? 'Local' : filters.venue === 'away' ? 'Visitante' : null,
     filters.result !== 'all' ? { win: 'Ganados', draw: 'Empates', loss: 'Perdidos' }[filters.result] : null,
+    filters.attendance === 'yes' ? 'En la cancha' : filters.attendance === 'no' ? 'Sin ir a la cancha' : null,
     position !== 'all' ? POSITIONS[position]?.label + 's' : null,
     minApps > 1 ? `mín. ${minApps} partidos` : null,
     `${summary.matches} ${summary.matches === 1 ? 'partido' : 'partidos'}`,
@@ -262,6 +273,17 @@ const DashboardPage = () => {
               options={[{ value: 'all', label: 'Todos' }, { value: 'win', label: 'Ganados' }, { value: 'draw', label: 'Empates' }, { value: 'loss', label: 'Perdidos' }]}
             />
           </div>
+          {attendedDates.size > 0 && (
+            <div className="dash-field">
+              <span>Cancha</span>
+              <Segmented
+                label="Cancha"
+                value={filters.attendance}
+                onChange={v => setFilter('attendance', v)}
+                options={[{ value: 'all', label: 'Todos' }, { value: 'yes', label: '🏟️ Fui' }, { value: 'no', label: 'No fui' }]}
+              />
+            </div>
+          )}
           {activeFilterCount > 0 && (
             <button className="dash-clear" onClick={() => setFilters(DEFAULT_FILTERS)}>
               <X size={14} /> Limpiar filtros

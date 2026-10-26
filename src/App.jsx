@@ -17,6 +17,7 @@ import './pages/LoginPage.css';
 import './pages/ProfilePage.css';
 import './pages/FriendsPage.css';
 import './pages/FriendRatingsPage.css';
+import './pages/CanchaPage.css';
 import './App.css';
 import './styles/dark.css';
 import './styles/dark-overrides.css';
@@ -28,6 +29,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const FriendsPage = lazy(() => import('./pages/FriendsPage'));
 const FriendRatingsPage = lazy(() => import('./pages/FriendRatingsPage'));
+const CanchaPage = lazy(() => import('./pages/CanchaPage'));
 
 const FullPageLoader = () => (
   <div style={{ 
@@ -133,6 +135,7 @@ function App() {
             >
               <Route index element={<RatingPage />} />
               <Route path="dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+              <Route path="cancha" element={<Suspense fallback={<PageLoader />}><CanchaPage /></Suspense>} />
               <Route path="manage" element={<Suspense fallback={<PageLoader />}><ManageRatings /></Suspense>} />
               <Route path="profile" element={<Suspense fallback={<PageLoader />}><ProfilePage /></Suspense>} />
               <Route path="friends" element={<Suspense fallback={<PageLoader />}><FriendsPage /></Suspense>} />

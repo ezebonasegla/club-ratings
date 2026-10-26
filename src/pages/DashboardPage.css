@@ -977,11 +977,12 @@
   .dash-filter-toggle { display: none; }
   .dash-filters,
   .dash-filters.open {
-    display: grid;
-    grid-template-columns: 1fr 1.4fr 1.3fr 1.8fr auto;
-    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
     gap: 1rem;
   }
+  .dash-filters > .dash-field { flex: 1 1 170px; }
   .dash-clear { align-self: end; padding-bottom: 0.6rem; }
 
   .dash-leaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); overflow: visible; }
