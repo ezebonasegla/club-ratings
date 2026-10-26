@@ -2556,6 +2556,176 @@
   color: #eb7070;
 }
 
+/* ---- pages/manage/AllMatches.css ---- */
+:root[data-theme="dark"] .manage-tabs {
+  background: #121416;
+  border: 1px solid #282a30;
+}
+
+:root[data-theme="dark"] .manage-tabs button {
+  border: none;
+  background: transparent;
+  color: #8a91a0;
+}
+
+:root[data-theme="dark"] .manage-tabs button.active {
+  background: var(--primary-color);
+  color: var(--text-color, #fff);
+}
+
+:root[data-theme="dark"] .allm {
+  --tier-elite: #0f8a4b;
+  --tier-good: #3fae6a;
+  --tier-ok: #d9a400;
+  --tier-meh: #e07b26;
+  --tier-bad: #d64545;
+}
+
+:root[data-theme="dark"] .allm-help {
+  color: #9aa0ac;
+}
+
+:root[data-theme="dark"] .allm-chip {
+  border: 1px solid #2c2f36;
+  background: #121416;
+  color: #9aa0ac;
+}
+
+:root[data-theme="dark"] .allm-chip.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-color, #fff);
+}
+
+:root[data-theme="dark"] .allm-error {
+  color: #c62828;
+  background: #1a1c20;
+  border: 1px solid #3d1a1a;
+}
+
+:root[data-theme="dark"] .allm-toolbar {
+  background: #121416;
+  border: 1px solid #282a30;
+}
+
+:root[data-theme="dark"] .allm-summary {
+  color: #9aa0ac;
+}
+
+:root[data-theme="dark"] .allm-summary b {
+  color: #d1d3d9;
+}
+
+:root[data-theme="dark"] .allm-btn {
+  border: 1px solid var(--primary-color);
+  background: var(--primary-color);
+  color: var(--text-color, #fff);
+}
+
+:root[data-theme="dark"] .allm-btn.ghost {
+  background: #121416;
+  color: #b9bdc6;
+  border-color: #393d46;
+}
+
+:root[data-theme="dark"] .allm-progress {
+  background: #1f2126;
+}
+
+:root[data-theme="dark"] .allm-progress span {
+  background: #1e9e5a;
+}
+
+:root[data-theme="dark"] .allm-progress small {
+  color: #d1d3d9;
+}
+
+:root[data-theme="dark"] .allm-list {
+  background: #121416;
+  border: 1px solid #282a30;
+}
+
+:root[data-theme="dark"] .allm-row {
+  border-bottom: 1px solid #1f2126;
+}
+
+:root[data-theme="dark"] .allm-row:last-child {
+  border-bottom: none;
+}
+
+:root[data-theme="dark"] .allm-row.is-attended {
+  background: #191a1e;
+}
+
+:root[data-theme="dark"] .allm-res {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .res-G {
+  background: #1e9e5a;
+}
+
+:root[data-theme="dark"] .res-E {
+  background: #d9a400;
+}
+
+:root[data-theme="dark"] .res-P {
+  background: #d64545;
+}
+
+:root[data-theme="dark"] .allm-title {
+  color: #d1d3d9;
+}
+
+:root[data-theme="dark"] .allm-meta {
+  color: #7b8293;
+}
+
+:root[data-theme="dark"] .allm-rated {
+  color: #7be092;
+}
+
+:root[data-theme="dark"] .allm-rated .dash-pill {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .allm-rated svg {
+  fill: currentColor;
+}
+
+:root[data-theme="dark"] .allm-rate {
+  border: 1px dashed var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:root[data-theme="dark"] .allm-box {
+  border: 2px solid #464a55;
+  background: #121416;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .allm-check.checked .allm-box {
+  background: #1e9e5a;
+  border-color: #1e9e5a;
+}
+
+:root[data-theme="dark"] .allm-check input:focus-visible + .allm-box {
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
+}
+
+:root[data-theme="dark"] .allm-check-label {
+  color: #8a91a0;
+}
+
+:root[data-theme="dark"] .allm-pager {
+  color: #9aa0ac;
+}
+
+:root[data-theme="dark"] .allm-empty {
+  color: #7b8293;
+}
+
 /* ---- styles/legacy-shared.css ---- */
 :root[data-theme="dark"] .dashboard-page {
   background: linear-gradient(135deg, #1a1c20 0%, #24262c 100%);

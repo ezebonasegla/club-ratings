@@ -424,3 +424,51 @@ export const repairSeedOverwrites = async (user, clubId) => {
   await saveUserConfig(user.uid, { canchaSeedRepair1: true });
   return broken.length;
 };
+
+/**
+ * Arma el registro de cancha desde un partido del historial de Sofascore
+ * (listado de eventos), para marcar "Fui" sin haberlo valorado.
+ */
+export const buildAttendanceFromEvent = (event, teamId, existing = [], goals = null) => {
+  const pad = n => String(n).padStart(2, '0');
+  const d = new Date(event.startTimestamp * 1000);
+  const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const isHome = event.homeTeam?.id === teamId;
+  const us = isHome ? event.homeScore : event.awayScore;
+  const them = isHome ? event.awayScore : event.homeScore;
+  const names = key => [...new Set(existing.map(a => a[key]).filter(Boolean))];
+
+  // Estadio de local = el más frecuente del registro
+  const count = {};
+  existing.forEach(a => { if (a.estadio) count[a.estadio] = (count[a.estadio] || 0) + 1; });
+  const homeStadium = Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+
+  // DT: el del partido registrado más cercano en el tiempo
+  const nearest = [...existing].filter(a => a.dt).sort((a, b) =>
+    Math.abs(new Date(a.fecha) - d) - Math.abs(new Date(b.fecha) - d))[0];
+
+  const gf = us?.display ?? us?.current ?? 0;
+  const gc = them?.display ?? them?.current ?? 0;
+  const penales = us?.penalties !== undefined && them?.penalties !== undefined && gf === gc
+    ? { club: us.penalties, rival: them.penalties }
+    : null;
+
+  return {
+    fecha,
+    rival: matchExistingName((isHome ? event.awayTeam : event.homeTeam)?.name || 'Rival', names('rival')),
+    gf,
+    gc,
+    comp: competitionFor({
+      competition: event.tournament?.name || '',
+      competitionDetail: [event.tournament?.name, event.season?.name, event.tournament?.uniqueTournament?.name].filter(Boolean).join(' · '),
+    }, names('comp')),
+    ronda: roundLabel(event.roundInfo?.round, event.roundInfo?.name),
+    dt: nearest?.dt || '',
+    estadio: isHome ? homeStadium : '',
+    goles: goals?.user || [],
+    golesRival: goals?.rival || [],
+    penales,
+    matchId: String(event.id),
+    source: 'bulk',
+  };
+};

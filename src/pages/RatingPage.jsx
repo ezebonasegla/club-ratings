@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { fetchMatchData, getLastMatchUrl, extractMatchId, prefetchLastMatches } from '../services/sofascoreService';
 import { saveRatingToCloud, checkMatchAlreadyRated, prefetchUserRatings } from '../services/cloudStorageService';
 import { useTheme } from '../context/ThemeContext';
@@ -11,6 +12,7 @@ import './RatingPage.css';
 const RatingPage = () => {
   const { club, clubId } = useTheme();
   const { user } = useAuth();
+  const location = useLocation();
   const [matchUrl, setMatchUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingLastMatch, setLoadingLastMatch] = useState(false);
@@ -35,6 +37,16 @@ const RatingPage = () => {
   useEffect(() => {
     if (user) prefetchUserRatings(user.uid);
   }, [user]);
+
+  // Llegada desde Gestionar → "Valorar": cargar ese partido directamente
+  const requestedUrl = location.state?.matchUrl;
+  useEffect(() => {
+    if (!requestedUrl || !club) return;
+    window.history.replaceState({}, document.title);
+    const timer = setTimeout(() => handleLoadMatch(requestedUrl), 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedUrl, club]);
 
   // Primera vez: traer los partidos de "Mi River en la cancha" (sólo la cuenta dueña).
   // Se guarda la promesa para que nada consulte el registro antes de que termine.
@@ -120,8 +132,10 @@ const RatingPage = () => {
     }
   };
 
-  const handleLoadMatch = async () => {
-    if (!matchUrl.trim()) {
+  // urlArg: cuando se llega desde Gestionar → "Valorar" con un partido puntual
+  const handleLoadMatch = async (urlArg) => {
+    const url = typeof urlArg === 'string' ? urlArg : matchUrl;
+    if (!url.trim()) {
       setError('Por favor ingresa una URL de Sofascore');
       return;
     }
@@ -134,10 +148,11 @@ const RatingPage = () => {
     setLoading(true);
     setError('');
     setSavedRating(null);
+    setMatchUrl(url);
 
     try {
       // Pasar el club del usuario para validar que el partido sea de ese club
-      const data = await loadMatchIfNotRated(matchUrl);
+      const data = await loadMatchIfNotRated(url);
       if (!data) return;
 
       initializeMatch(data);

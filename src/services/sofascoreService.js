@@ -450,6 +450,40 @@ export const fetchTeamHistory = async (teamId, sinceIso, maxPages = 12) => {
 };
 
 /**
+ * Una página del historial de partidos del club (Sofascore pagina de a ~30,
+ * del más reciente al más antiguo). Sólo partidos terminados.
+ */
+export const fetchTeamEventsPage = async (teamId, page = 0) => {
+  const url = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/${page}`;
+  const response = await fetchFromSofascore(url, page === 0 ? LAST_EVENTS_TTL : 60 * 60 * 1000);
+  const now = Math.floor(Date.now() / 1000);
+  const events = (response.data?.events || [])
+    .filter(e => e.status?.type === 'finished' && e.startTimestamp < now)
+    .sort((a, b) => b.startTimestamp - a.startTimestamp);
+  return { events, hasNextPage: !!response.data?.hasNextPage };
+};
+
+/**
+ * Goles de un partido (para el registro de cancha), desde el punto de vista del club
+ */
+export const fetchMatchGoals = async (matchId, isUserTeamHome) => {
+  const url = `https://api.sofascore.com/api/v1/event/${matchId}/incidents`;
+  const response = await fetchFromSofascore(url, 24 * 60 * 60 * 1000);
+  const incidents = [...(response.data?.incidents || [])].sort((a, b) => (a.time || 0) - (b.time || 0));
+  const goalType = cls => (cls === 'penalty' ? 'penal' : cls === 'ownGoal' ? 'autogol' : 'gol');
+  const goals = incidents.filter(i => i.incidentType === 'goal' && i.player?.name);
+  return {
+    user: goals.filter(i => i.isHome === isUserTeamHome).map(i => ({ jugador: i.player.name, tipo: goalType(i.incidentClass) })),
+    rival: goals.filter(i => i.isHome !== isUserTeamHome).map(i => ({ jugador: i.player.name, tipo: goalType(i.incidentClass) })),
+  };
+};
+
+/**
+ * URL de Sofascore de un evento (en el formato que entiende extractMatchId)
+ */
+export const eventUrl = (event) => `https://www.sofascore.com/football/match/${event.slug || ''}#id:${event.id}`;
+
+/**
  * Obtiene el último partido del club desde su página de equipo
  * @param {number} teamId - ID del equipo en Sofascore
  * @returns {string|null} URL del último partido o null si no encuentra

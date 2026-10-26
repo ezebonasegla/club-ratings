@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Trash2, Edit2, X, Save, Calendar, Loader, Share2, MessageCircle, ThumbsUp, Flame, Star, Hand } from 'lucide-react';
 import ShareRatingModal from '../components/ShareRatingModal';
+import AllMatches from './manage/AllMatches';
 import './ManageRatings.css';
 
 const ManageRatings = () => {
@@ -22,6 +23,7 @@ const ManageRatings = () => {
   const [sharingRating, setSharingRating] = useState(null);
   const [comments, setComments] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
+  const [view, setView] = useState('ratings'); // 'ratings' | 'all'
   const highlightedRatingRef = useRef(null);
 
   // Helper para determinar el resultado del partido
@@ -216,164 +218,179 @@ const ManageRatings = () => {
         <h1>Gestionar Valoraciones</h1>
         <p className="subtitle">Edita o elimina partidos valorados anteriormente</p>
 
-        {ratings.length === 0 ? (
-          <div className="empty-state">
-            <Calendar size={64} />
-            <h2>No hay valoraciones guardadas</h2>
-            <p>Comienza valorando tu primer partido</p>
-          </div>
-        ) : (
-          <div className="ratings-list">
-            {ratings.map(rating => (
-              <div 
-                key={rating.id} 
-                className="rating-card"
-                ref={location.state?.highlightRatingId === rating.id ? highlightedRatingRef : null}
-              >
-                <div className="rating-header">
-                  <div className="match-info-mini">
-                    <h3>{rating.matchInfo.rival}</h3>
-                    <div className="match-details-mini">
-                      <span className="date">{rating.matchInfo.date}</span>
-                      <span className={`score score-${getMatchResult(rating.matchInfo)}`}>
-                        {rating.matchInfo.score}
-                      </span>
-                      <span className="competition">{rating.matchInfo.competition}</span>
+        <div className="manage-tabs" role="tablist">
+          <button role="tab" aria-selected={view === 'ratings'} className={view === 'ratings' ? 'active' : ''} onClick={() => setView('ratings')}>
+            Mis valoraciones
+          </button>
+          <button role="tab" aria-selected={view === 'all'} className={view === 'all' ? 'active' : ''} onClick={() => setView('all')}>
+            Todos los partidos
+          </button>
+        </div>
+
+        {view === 'all' && <AllMatches user={user} club={club} clubId={clubId} ratings={ratings} />}
+
+        {view === 'ratings' && (
+          <>
+            {ratings.length === 0 ? (
+              <div className="empty-state">
+                <Calendar size={64} />
+                <h2>No hay valoraciones guardadas</h2>
+                <p>Comienza valorando tu primer partido</p>
+              </div>
+            ) : (
+              <div className="ratings-list">
+                {ratings.map(rating => (
+                  <div 
+                    key={rating.id} 
+                    className="rating-card"
+                    ref={location.state?.highlightRatingId === rating.id ? highlightedRatingRef : null}
+                  >
+                    <div className="rating-header">
+                      <div className="match-info-mini">
+                        <h3>{rating.matchInfo.rival}</h3>
+                        <div className="match-details-mini">
+                          <span className="date">{rating.matchInfo.date}</span>
+                          <span className={`score score-${getMatchResult(rating.matchInfo)}`}>
+                            {rating.matchInfo.score}
+                          </span>
+                          <span className="competition">{rating.matchInfo.competition}</span>
+                        </div>
+                      </div>
+                      <div className="rating-actions">
+                        <button
+                          className="btn-share"
+                          onClick={() => setSharingRating(rating)}
+                          title="Compartir valoración"
+                        >
+                          <Share2 size={18} />
+                          Compartir
+                        </button>
+                        <button
+                          className="btn-edit"
+                          onClick={() => handleEdit(rating)}
+                          title="Editar valoraciones"
+                        >
+                          <Edit2 size={18} />
+                          Editar
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => setShowDeleteConfirm(rating.id)}
+                          title="Eliminar partido"
+                        >
+                          <Trash2 size={18} />
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="rating-actions">
-                    <button
-                      className="btn-share"
-                      onClick={() => setSharingRating(rating)}
-                      title="Compartir valoración"
-                    >
-                      <Share2 size={18} />
-                      Compartir
-                    </button>
-                    <button
-                      className="btn-edit"
-                      onClick={() => handleEdit(rating)}
-                      title="Editar valoraciones"
-                    >
-                      <Edit2 size={18} />
-                      Editar
-                    </button>
-                    <button
-                      className="btn-delete"
-                      onClick={() => setShowDeleteConfirm(rating.id)}
-                      title="Eliminar partido"
-                    >
-                      <Trash2 size={18} />
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
 
-                <div className="players-summary">
-                  {rating.players
-                    .filter(p => hasValidRating(p.rating))
-                    .slice(0, 5)
-                    .map(player => (
-                      <span key={player.id} className="player-chip">
-                        {player.name.split(' ').slice(-1)[0]}: {player.rating}
-                      </span>
-                    ))}
-                  {rating.players.filter(p => hasValidRating(p.rating)).length > 5 && (
-                    <span className="more-players">
-                      +{rating.players.filter(p => hasValidRating(p.rating)).length - 5} más
-                    </span>
-                  )}
-                </div>
+                    <div className="players-summary">
+                      {rating.players
+                        .filter(p => hasValidRating(p.rating))
+                        .slice(0, 5)
+                        .map(player => (
+                          <span key={player.id} className="player-chip">
+                            {player.name.split(' ').slice(-1)[0]}: {player.rating}
+                          </span>
+                        ))}
+                      {rating.players.filter(p => hasValidRating(p.rating)).length > 5 && (
+                        <span className="more-players">
+                          +{rating.players.filter(p => hasValidRating(p.rating)).length - 5} más
+                        </span>
+                      )}
+                    </div>
 
-                {/* Reacciones y Comentarios */}
-                <div className="rating-interactions">
-                  <div className="reactions-summary">
-                    {getTotalReactions(rating) > 0 && (
-                      <>
-                        {getReactionCount(rating, 'like') > 0 && (
-                          <span className="reaction-count">
-                            <ThumbsUp size={14} /> {getReactionCount(rating, 'like')}
-                          </span>
+                    {/* Reacciones y Comentarios */}
+                    <div className="rating-interactions">
+                      <div className="reactions-summary">
+                        {getTotalReactions(rating) > 0 && (
+                          <>
+                            {getReactionCount(rating, 'like') > 0 && (
+                              <span className="reaction-count">
+                                <ThumbsUp size={14} /> {getReactionCount(rating, 'like')}
+                              </span>
+                            )}
+                            {getReactionCount(rating, 'fire') > 0 && (
+                              <span className="reaction-count">
+                                <Flame size={14} /> {getReactionCount(rating, 'fire')}
+                              </span>
+                            )}
+                            {getReactionCount(rating, 'star') > 0 && (
+                              <span className="reaction-count">
+                                <Star size={14} /> {getReactionCount(rating, 'star')}
+                              </span>
+                            )}
+                            {getReactionCount(rating, 'clap') > 0 && (
+                              <span className="reaction-count">
+                                <Hand size={14} /> {getReactionCount(rating, 'clap')}
+                              </span>
+                            )}
+                          </>
                         )}
-                        {getReactionCount(rating, 'fire') > 0 && (
-                          <span className="reaction-count">
-                            <Flame size={14} /> {getReactionCount(rating, 'fire')}
-                          </span>
-                        )}
-                        {getReactionCount(rating, 'star') > 0 && (
-                          <span className="reaction-count">
-                            <Star size={14} /> {getReactionCount(rating, 'star')}
-                          </span>
-                        )}
-                        {getReactionCount(rating, 'clap') > 0 && (
-                          <span className="reaction-count">
-                            <Hand size={14} /> {getReactionCount(rating, 'clap')}
-                          </span>
-                        )}
-                      </>
+                      </div>
+
+                      {comments[rating.id]?.comments?.length > 0 && (
+                        <button 
+                          className="btn-toggle-comments"
+                          onClick={() => toggleComments(rating.id)}
+                        >
+                          <MessageCircle size={16} />
+                          {comments[rating.id].comments.length} comentario{comments[rating.id].comments.length !== 1 ? 's' : ''}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Lista de Comentarios Expandible */}
+                    {expandedComments[rating.id] && comments[rating.id]?.comments?.length > 0 && (
+                      <div className="comments-section-manage">
+                        {comments[rating.id].comments.map((comment) => (
+                          <div key={comment.id} className="comment-item-manage">
+                            <div className="comment-author-manage">
+                              {comment.userInfo?.displayName || 'Usuario'}
+                            </div>
+                            <div className="comment-text-manage">{comment.comment}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Confirm Delete Modal */}
+                    {showDeleteConfirm === rating.id && (
+                      <div className="delete-confirm-overlay" onClick={() => setShowDeleteConfirm(null)}>
+                        <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                          <h3>¿Eliminar este partido?</h3>
+                          <p>Esta acción no se puede deshacer</p>
+                          <div className="modal-actions">
+                            <button
+                              className="btn-cancel"
+                              onClick={() => setShowDeleteConfirm(null)}
+                              disabled={deleting}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              className="btn-confirm-delete"
+                              onClick={() => handleDelete(rating.id)}
+                              disabled={deleting}
+                            >
+                              {deleting ? (
+                                <>
+                                  <Loader size={18} className="spinner" />
+                                  Eliminando...
+                                </>
+                              ) : (
+                                'Eliminar'
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  {comments[rating.id]?.comments?.length > 0 && (
-                    <button 
-                      className="btn-toggle-comments"
-                      onClick={() => toggleComments(rating.id)}
-                    >
-                      <MessageCircle size={16} />
-                      {comments[rating.id].comments.length} comentario{comments[rating.id].comments.length !== 1 ? 's' : ''}
-                    </button>
-                  )}
-                </div>
-
-                {/* Lista de Comentarios Expandible */}
-                {expandedComments[rating.id] && comments[rating.id]?.comments?.length > 0 && (
-                  <div className="comments-section-manage">
-                    {comments[rating.id].comments.map((comment) => (
-                      <div key={comment.id} className="comment-item-manage">
-                        <div className="comment-author-manage">
-                          {comment.userInfo?.displayName || 'Usuario'}
-                        </div>
-                        <div className="comment-text-manage">{comment.comment}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Confirm Delete Modal */}
-                {showDeleteConfirm === rating.id && (
-                  <div className="delete-confirm-overlay" onClick={() => setShowDeleteConfirm(null)}>
-                    <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
-                      <h3>¿Eliminar este partido?</h3>
-                      <p>Esta acción no se puede deshacer</p>
-                      <div className="modal-actions">
-                        <button
-                          className="btn-cancel"
-                          onClick={() => setShowDeleteConfirm(null)}
-                          disabled={deleting}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          className="btn-confirm-delete"
-                          onClick={() => handleDelete(rating.id)}
-                          disabled={deleting}
-                        >
-                          {deleting ? (
-                            <>
-                              <Loader size={18} className="spinner" />
-                              Eliminando...
-                            </>
-                          ) : (
-                            'Eliminar'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
         {/* Edit Modal */}
