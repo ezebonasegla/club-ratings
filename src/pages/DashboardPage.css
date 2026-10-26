@@ -978,6 +978,7 @@
   .dash-filters,
   .dash-filters.open {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 1rem;
