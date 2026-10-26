@@ -4,7 +4,7 @@
  * registro de cancha.
  */
 import { buildMatches } from './stats';
-import { matchExistingName, competitionFor } from '../../services/attendanceService';
+import { matchExistingTeam, competitionFor } from '../../services/attendanceService';
 
 const pad = n => String(n).padStart(2, '0');
 export const isoOf = time => { const d = new Date(time); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -37,7 +37,7 @@ export const unifyMatches = (ratings, attendance) => {
       ...m,
       fecha: iso,
       date: m.date || displayDate(iso),
-      rival: a?.rival || matchExistingName(m.rival, rivalNames),
+      rival: a?.rival || matchExistingTeam(m.rival, rivalNames),
       comp: a?.comp || competitionFor({ competition: m.competition, competitionDetail: raw?.matchInfo?.competitionDetail }, compNames),
       ronda: a?.ronda || (raw?.matchInfo?.round ? `Fecha ${raw.matchInfo.round}` : ''),
       dt: a?.dt || '',

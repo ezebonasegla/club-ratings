@@ -229,6 +229,48 @@ export const matchExistingName = (name, existingNames) => {
   return candidates[0] || name;
 };
 
+// Palabras que se pueden omitir del nombre de un club sin cambiar de equipo
+// ("Boca Juniors" = "Boca", "Club Atlético Tigre" = "Tigre", "Vélez Sarsfield" = "Vélez")
+const GENERIC_TEAM_WORDS = new Set([
+  'club', 'atletico', 'ca', 'cd', 'fc', 'cf', 'sc', 'ac', 'afc', 'juniors', 'sarsfield', 'de', 'la', 'del', 'y',
+  'plata', 'old', 'boys', 'esgrima', 'sporting', 'asociacion', 'social', 'deportivo', 'deportiva', 'football', 'futbol',
+]);
+
+// Abreviaturas habituales en nombres de clubes
+const TEAM_ABBREVIATIONS = {
+  ind: 'independiente', atl: 'atletico', jr: 'juniors', jrs: 'juniors', lp: 'la plata', est: 'estudiantes',
+  univ: 'universidad', dep: 'deportivo', gral: 'general', sp: 'sporting', sta: 'santa', sto: 'santo',
+};
+
+// "Ind. Santa Fe (C)" → ["independiente", "santa", "fe"]; "Newell's" → ["newells"]
+const teamWords = s => norm(String(s || '').replace(/\([^)]*\)/g, ' ').replace(/['’`]/g, ''))
+  .split(' ')
+  .filter(Boolean)
+  .flatMap(w => (TEAM_ABBREVIATIONS[w] || w).split(' '));
+
+/**
+ * Nombre de rival como ya lo usa el usuario. Coincide si todas las palabras del
+ * nombre del usuario aparecen en orden (con abreviaturas expandidas) y lo que
+ * sobra son palabras genéricas de club. Así "Independiente Santa Fe" = "Ind. Santa Fe (C)"
+ * y NO "Independiente"; "Gimnasia y Esgrima La Plata" = "Gimnasia LP".
+ */
+export const matchExistingTeam = (name, existingNames) => {
+  const words = teamWords(name);
+  if (!words.length) return name;
+  const candidates = existingNames
+    .map(e => ({ e, w: teamWords(e) }))
+    .filter(({ w }) => {
+      if (!w.length || w.join(' ').length < 4) return false;
+      // Subsecuencia: las palabras del nombre corto, en orden, dentro del largo
+      let k = 0;
+      const rest = [];
+      words.forEach(x => { if (k < w.length && x === w[k]) k++; else rest.push(x); });
+      return k === w.length && rest.every(x => GENERIC_TEAM_WORDS.has(x));
+    })
+    .sort((a, b) => b.w.length - a.w.length);
+  return candidates[0]?.e || name;
+};
+
 /**
  * Fecha ISO (aaaa-mm-dd) de una valoración guardada
  */
@@ -294,7 +336,8 @@ export const buildAttendanceFromMatch = (matchData, existing = []) => {
   const lastDt = existing.find(a => a.dt)?.dt || '';
   return {
     fecha: info.isoDate,
-    rival: matchExistingName(info.rival, names('rival')),
+    rival: matchExistingTeam(info.rival, names('rival')),
+    rivalSofascore: info.rival || '',
     gf: info.userScore ?? 0,
     gc: info.rivalScore ?? 0,
     comp: competitionFor(info, names('comp')),
@@ -455,7 +498,8 @@ export const buildAttendanceFromEvent = (event, teamId, existing = [], goals = n
 
   return {
     fecha,
-    rival: matchExistingName((isHome ? event.awayTeam : event.homeTeam)?.name || 'Rival', names('rival')),
+    rival: matchExistingTeam((isHome ? event.awayTeam : event.homeTeam)?.name || 'Rival', names('rival')),
+    rivalSofascore: (isHome ? event.awayTeam : event.homeTeam)?.name || '',
     gf,
     gc,
     comp: competitionFor({
