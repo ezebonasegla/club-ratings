@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchMatchData, getLastMatchUrl, extractMatchId, prefetchLastMatches } from '../services/sofascoreService';
 import { saveRatingToCloud, checkMatchAlreadyRated, prefetchUserRatings } from '../services/cloudStorageService';
 import { useTheme } from '../context/ThemeContext';
@@ -36,9 +36,11 @@ const RatingPage = () => {
     if (user) prefetchUserRatings(user.uid);
   }, [user]);
 
-  // Primera vez: traer los partidos de "Mi River en la cancha" (sólo la cuenta dueña)
+  // Primera vez: traer los partidos de "Mi River en la cancha" (sólo la cuenta dueña).
+  // Se guarda la promesa para que nada consulte el registro antes de que termine.
+  const seedPromise = useRef(Promise.resolve());
   useEffect(() => {
-    if (user && clubId) ensureSeedImported(user, clubId);
+    if (user && clubId) seedPromise.current = ensureSeedImported(user, clubId);
   }, [user, clubId]);
 
   // Carga el partido mientras en paralelo verifica si ya fue valorado
@@ -66,7 +68,7 @@ const RatingPage = () => {
 
     // Si el partido ya está en "Mi cancha" (p. ej. importado), viene marcado que fue
     if (user && data.matchInfo?.isoDate) {
-      getAttendance(user.uid, clubId).then(result => {
+      seedPromise.current.then(() => getAttendance(user.uid, clubId)).then(result => {
         const id = attendanceId(user.uid, clubId, data.matchInfo.isoDate);
         const found = result.data.find(a => a.id === id);
         if (found) {
@@ -212,14 +214,18 @@ const RatingPage = () => {
         // Registrar (o vincular) el partido en "Mi cancha"
         let attendanceStatus = null;
         if (attended && matchData.matchInfo?.isoDate) {
-          const existing = await getAttendance(user.uid, clubId);
+          // Releer siempre al guardar: si el partido ya estaba registrado (p. ej. recién
+          // importado) sólo se vincula, sin pisar los datos que cargó el usuario
+          await seedPromise.current;
+          const existing = await getAttendance(user.uid, clubId, { force: true });
+          const found = existing.data.find(a => a.id === attendanceId(user.uid, clubId, matchData.matchInfo.isoDate));
           const link = { ratingId: result.id, matchId: ratingData.matchId };
-          const entry = existingAttendance
-            ? { fecha: existingAttendance.fecha, ...link } // ya estaba cargado: sólo se vincula
+          const entry = found
+            ? { fecha: found.fecha, ...link }
             : { ...buildAttendanceFromMatch(matchData, existing.data), ...link, source: 'rating' };
-          const saved = await saveAttendance(user.uid, clubId, entry);
+          const saved = existing.success ? await saveAttendance(user.uid, clubId, entry) : existing;
           attendanceStatus = saved.success
-            ? (existingAttendance ? 'linked' : 'added')
+            ? (found ? 'linked' : 'added')
             : saved.error;
         }
 

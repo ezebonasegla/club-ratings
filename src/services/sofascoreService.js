@@ -179,7 +179,10 @@ export const fetchMatchData = async (matchUrl, userClub = null) => {
       homeTeam: eventData.homeTeam.name,
       awayTeam: eventData.awayTeam.name,
       competition: eventData.tournament.name,
+      // Texto completo para reconocer la competencia ("…Clausura", "…Apertura")
+      competitionDetail: [eventData.tournament?.name, eventData.season?.name, eventData.tournament?.uniqueTournament?.name].filter(Boolean).join(' · '),
       round: eventData.roundInfo?.round || '',
+      roundName: eventData.roundInfo?.name || '',
       score: `${homeScore} - ${awayScore}`,
       homeScore: homeScore,
       awayScore: awayScore
@@ -421,6 +424,29 @@ export const prefetchMatchData = (matchUrl) => {
   const matchId = extractMatchId(matchUrl || '');
   if (!matchId) return;
   matchEndpoints(matchId).forEach(url => fetchFromSofascore(url).catch(() => {}));
+};
+
+/**
+ * Historial de partidos del club hasta una fecha (aaaa-mm-dd), recorriendo
+ * las páginas de "últimos partidos" de Sofascore (máx. maxPages pedidos).
+ * Devuelve un Map fecha → evento.
+ */
+export const fetchTeamHistory = async (teamId, sinceIso, maxPages = 12) => {
+  const byDate = new Map();
+  const pad = n => String(n).padStart(2, '0');
+  for (let page = 0; page < maxPages; page++) {
+    const url = `https://api.sofascore.com/api/v1/team/${teamId}/events/last/${page}`;
+    const response = await fetchFromSofascore(url, 60 * 60 * 1000);
+    const events = response.data?.events || [];
+    events.forEach(e => {
+      const d = new Date(e.startTimestamp * 1000);
+      byDate.set(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, e);
+    });
+    const oldest = Math.min(...events.map(e => e.startTimestamp));
+    const oldestIso = events.length ? new Date(oldest * 1000).toISOString().slice(0, 10) : '';
+    if (!response.data?.hasNextPage || !events.length || oldestIso <= sinceIso) break;
+  }
+  return byDate;
 };
 
 /**

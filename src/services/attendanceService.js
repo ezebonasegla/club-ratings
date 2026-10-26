@@ -242,6 +242,49 @@ export const ratingIsoDate = (rating) => {
   return null;
 };
 
+// Palabras que identifican una competencia (el resto, como "Liga" o "Copa", son genéricas)
+const GENERIC_WORDS = new Set(['liga', 'profesional', 'futbol', 'copa', 'torneo', 'conmebol', 'argentina', 'primera', 'division', 'de', 'la', 'del', 'lpf', 'season', 'temporada']);
+const keyWords = s => norm(s).split(' ').filter(w => w.length >= 4 && !GENERIC_WORDS.has(w) && !/^\d+$/.test(w));
+
+/**
+ * Competencia con el nombre que ya usa el usuario. Primero por palabra clave
+ * ("…Clausura" → "Clausura Argentina", "CONMEBOL Libertadores" → "Libertadores"),
+ * después por prefijo/sufijo.
+ */
+export const competitionFor = (info, existingComps) => {
+  const detail = info.competitionDetail || info.competition || '';
+  const words = new Set(keyWords(detail));
+  const byKeyword = existingComps.filter(c => keyWords(c).some(w => words.has(w)));
+  if (byKeyword.length === 1) return byKeyword[0];
+  return matchExistingName(info.competition || '', existingComps);
+};
+
+const ROUND_NAMES = {
+  'round of 64': '32avos de final',
+  'round of 32': '16avos de final',
+  'round of 16': 'Octavos',
+  'quarterfinals': 'Cuartos',
+  'quarter-finals': 'Cuartos',
+  'semifinals': 'Semifinal',
+  'semi-finals': 'Semifinal',
+  'final': 'Final',
+  'preliminary round': 'Fase previa',
+  'qualification': 'Fase previa',
+};
+
+/**
+ * Texto de la ronda: "Fecha 14", "Octavos", "Grupos · Fecha 3"…
+ * currentRonda permite completar lo que el usuario ya tenía ("Fecha" → "Fecha 14")
+ */
+export const roundLabel = (round, roundName, currentRonda = '') => {
+  const current = String(currentRonda || '').trim();
+  const named = roundName ? ROUND_NAMES[roundName.toLowerCase()] || roundName : '';
+  if (/^grupos?$/i.test(current)) return round ? `Grupos · Fecha ${round}` : current;
+  if (current && current !== '-' && !/^fecha$/i.test(current)) return current; // ya completo
+  if (named) return named;
+  return round ? `Fecha ${round}` : current;
+};
+
 /**
  * Arma el registro de cancha a partir del partido cargado desde Sofascore
  */
@@ -254,8 +297,8 @@ export const buildAttendanceFromMatch = (matchData, existing = []) => {
     rival: matchExistingName(info.rival, names('rival')),
     gf: info.userScore ?? 0,
     gc: info.rivalScore ?? 0,
-    comp: matchExistingName(info.competition || '', names('comp')),
-    ronda: info.round ? `Fecha ${info.round}` : '',
+    comp: competitionFor(info, names('comp')),
+    ronda: roundLabel(info.round, info.roundName),
     dt: lastDt,
     estadio: matchExistingName(info.stadium || '', names('estadio')),
     goles: (matchData.goals?.user || []).map(({ jugador, tipo }) => ({ jugador, tipo })),
@@ -306,4 +349,78 @@ export const ensureSeedImported = async (user, clubId) => {
     seedChecked.delete(user.uid);
     return false;
   }
+};
+
+// ---------- Completar números de fecha y reparar datos pisados ----------
+
+/**
+ * Completa "Fecha" → "Fecha N" (y "Grupos" → "Grupos · Fecha N") buscando cada
+ * partido en el historial del club en Sofascore. Se hace una sola vez por usuario.
+ * Devuelve la cantidad de partidos actualizados.
+ */
+export const fillRoundNumbers = async (user, clubId, teamId, list) => {
+  if (!user || !teamId) return 0;
+  // Sin número: vacío, "-", "Fecha" o "Grupos"
+  const pending = list.filter(a => !a.ronda || /^(fecha|grupos?|-)$/i.test(a.ronda.trim()));
+  if (!pending.length) return 0;
+
+  const { getUserConfig, saveUserConfig } = await import('./cloudUserConfigService');
+  const flag = `canchaRoundsFilled_${clubId}`;
+  const config = await getUserConfig(user.uid);
+  if (!config.success || config.data?.[flag]) return 0;
+
+  const { fetchTeamHistory } = await import('./sofascoreService');
+  const since = pending.map(a => a.fecha).sort()[0];
+  const history = await fetchTeamHistory(teamId, since);
+
+  const updates = pending
+    .map(a => {
+      const ev = history.get(a.fecha);
+      if (!ev) return null;
+      const ronda = roundLabel(ev.roundInfo?.round, ev.roundInfo?.name, a.ronda);
+      return ronda && ronda !== a.ronda ? { id: a.id, ronda, matchId: a.matchId || String(ev.id) } : null;
+    })
+    .filter(Boolean);
+
+  for (let i = 0; i < updates.length; i += 400) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + 400).forEach(u => batch.set(doc(db, COLLECTION, u.id), { ronda: u.ronda, matchId: u.matchId, userId: user.uid, clubId }, { merge: true }));
+    await batch.commit();
+  }
+  invalidate(user.uid);
+  await saveUserConfig(user.uid, { [flag]: true });
+  return updates.length;
+};
+
+/**
+ * Reparación (una vez): al valorar un partido mientras se importaban los datos,
+ * el registro importado se sobrescribía con los datos de Sofascore. Se restauran
+ * los datos originales de esos partidos (manteniendo el vínculo con la valoración).
+ */
+export const repairSeedOverwrites = async (user, clubId) => {
+  if (!user?.email || clubId !== SEED_CLUB_ID || !crypto?.subtle) return 0;
+  if (await sha256(user.email.trim().toLowerCase()) !== SEED_OWNER_HASH) return 0;
+
+  const { getUserConfig, saveUserConfig } = await import('./cloudUserConfigService');
+  const config = await getUserConfig(user.uid);
+  if (!config.success || !config.data?.canchaSeedImported || config.data?.canchaSeedRepair1) return 0;
+
+  const existing = await getAttendance(user.uid, clubId, { force: true });
+  if (!existing.success) return 0;
+  const { default: seed } = await import('../data/canchaSeed.json');
+  const { partidos } = parseImport(JSON.stringify(seed));
+  const seedByDate = new Map(partidos.map(p => [p.fecha, p]));
+
+  const broken = existing.data.filter(a => a.source === 'rating' && seedByDate.has(a.fecha));
+  if (broken.length) {
+    const batch = writeBatch(db);
+    broken.forEach(a => {
+      const p = seedByDate.get(a.fecha);
+      batch.set(doc(db, COLLECTION, a.id), { ...clean(p), source: 'import', userId: user.uid, clubId }, { merge: true });
+    });
+    await batch.commit();
+    invalidate(user.uid);
+  }
+  await saveUserConfig(user.uid, { canchaSeedRepair1: true });
+  return broken.length;
 };

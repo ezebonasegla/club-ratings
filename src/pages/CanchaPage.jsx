@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   getAttendance, updateAttendance, deleteAttendance, exportAttendance, ratingIsoDate, ensureSeedImported,
+  repairSeedOverwrites, fillRoundNumbers,
 } from '../services/attendanceService';
 import { getAllRatingsFromCloud, hasValidRating } from '../services/cloudStorageService';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
@@ -59,9 +60,13 @@ const CanchaPage = () => {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const roundsChecked = useRef(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   const load = useCallback(async (force = false) => {
     if (!user || !clubId) return;
     if (await ensureSeedImported(user, clubId)) force = true;
+    if (await repairSeedOverwrites(user, clubId)) force = true;
     const [att, rat] = await Promise.all([
       getAttendance(user.uid, clubId, { force }),
       getAllRatingsFromCloud(user.uid, clubId, primaryClubId),
@@ -70,13 +75,21 @@ const CanchaPage = () => {
     setError(att.success ? '' : att.error);
     setRatings(rat.success ? rat.data : []);
     setLoading(false);
-  }, [user, clubId, primaryClubId]);
+
+    // Una vez: completar los números de fecha desde Sofascore (en segundo plano)
+    if (att.success && !roundsChecked.current) {
+      roundsChecked.current = true;
+      fillRoundNumbers(user, clubId, club?.sofascoreId, att.data)
+        .then(n => { if (n > 0) setReloadKey(k => k + 1); })
+        .catch(error => console.error('No se pudieron completar los números de fecha:', error));
+    }
+  }, [user, clubId, primaryClubId, club?.sofascoreId]);
 
   useEffect(() => {
     // Diferido para no actualizar estado de forma síncrona dentro del efecto
-    const timer = setTimeout(() => load(), 0);
+    const timer = setTimeout(() => load(reloadKey > 0), 0);
     return () => clearTimeout(timer);
-  }, [load]);
+  }, [load, reloadKey]);
 
   // Valoraciones por fecha, con el promedio del equipo
   const ratingByDate = useMemo(() => {
