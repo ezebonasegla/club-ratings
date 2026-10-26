@@ -487,6 +487,18 @@
   color: #d64545;
 }
 
+:root[data-theme="dark"] .cancha-tag-attended {
+  color: #76e5aa;
+}
+
+:root[data-theme="dark"] .cancha-tag-muted {
+  color: var(--dash-muted);
+}
+
+:root[data-theme="dark"] button.cancha-vs-col:hover {
+  border-color: var(--primary-color);
+}
+
 /* ---- pages/ClubSelection.css ---- */
 :root[data-theme="dark"] .club-selection-page {
   background: linear-gradient(135deg, #1a1c20 0%, #2a2d33 100%);

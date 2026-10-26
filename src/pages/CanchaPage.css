@@ -267,3 +267,10 @@
   .cancha-goals-wrap { grid-template-columns: 1fr 1fr; }
   .cancha-hint { grid-column: 1 / -1; }
 }
+
+/* Etiquetas de la lista unificada y tarjetas cancha vs. sin ir (botones) */
+.cancha-tag-attended { color: #1e9e5a; }
+.cancha-tag-muted { color: var(--dash-muted); }
+button.cancha-vs-col { font: inherit; text-align: left; cursor: pointer; }
+button.cancha-vs-col:hover { border-color: var(--primary-color); }
+.dash > .dash-container > .dash-segmented { max-width: 460px; }

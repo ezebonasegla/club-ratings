@@ -3,7 +3,10 @@
  */
 
 // Los penales cuentan como empate en el resultado
-export const res = p => (p.gf > p.gc ? 'G' : p.gf < p.gc ? 'P' : 'E');
+const RESULT_CODE = { win: 'G', draw: 'E', loss: 'P' };
+export const res = p => (p.gf == null || p.gc == null
+  ? RESULT_CODE[p.result] || 'E'
+  : p.gf > p.gc ? 'G' : p.gf < p.gc ? 'P' : 'E');
 export const hasPen = p => p.gf === p.gc && p.penales && p.penales.club !== p.penales.rival;
 export const penWon = p => hasPen(p) && p.penales.club > p.penales.rival;
 
@@ -45,7 +48,7 @@ export const filterMatches = (list, f) => {
 
 export const stats = (ps) => {
   const s = { pj: ps.length, G: 0, E: 0, P: 0, gf: 0, gc: 0, vi: 0 };
-  ps.forEach(p => { s[res(p)]++; s.gf += p.gf; s.gc += p.gc; if (!p.gc) s.vi++; });
+  ps.forEach(p => { s[res(p)]++; s.gf += p.gf || 0; s.gc += p.gc || 0; if (p.gc === 0) s.vi++; });
   s.ef = s.pj ? Math.round(((s.G * 3 + s.E) / (s.pj * 3)) * 100) : 0;
   return s;
 };

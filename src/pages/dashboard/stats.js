@@ -123,8 +123,11 @@ export const buildMatches = (ratings) =>
     })
     .sort((a, b) => b.time - a.time);
 
-export const filterMatches = (matches, { competition, period, venue, result, attendance = 'all' }) => {
+export const filterMatches = (matches, { competition, period, venue, result, attendance = 'all', rival = 'all', dt = 'all', scorer = 'all' }) => {
   let list = matches;
+  if (scorer !== 'all') list = list.filter(m => (m.goles || []).some(g => g.tipo !== 'autogol' && g.jugador === scorer));
+  if (rival !== 'all') list = list.filter(m => m.rival === rival);
+  if (dt !== 'all') list = list.filter(m => m.dt === dt);
   if (attendance !== 'all') list = list.filter(m => (attendance === 'yes' ? m.attended : !m.attended));
   if (competition !== 'all') list = list.filter(m => m.competition === competition);
   if (venue !== 'all') list = list.filter(m => m.venue === venue);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader, Users, Moon, Sun, Ticket } from 'lucide-react';
+import { ClipboardList, BarChart3, Settings, LogOut, Shield, Menu, X, ChevronDown, Plus, Loader, Users, Moon, Sun } from 'lucide-react';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -223,14 +223,6 @@ const Layout = () => {
             >
               <BarChart3 size={20} />
               <span>Dashboard</span>
-            </NavLink>
-            <NavLink 
-              to="/cancha" 
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-              onClick={closeMobileMenu}
-            >
-              <Ticket size={20} />
-              <span>Cancha</span>
             </NavLink>
             <NavLink 
               to="/friends" 
